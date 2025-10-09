@@ -50,3 +50,7 @@ project-root/
 │   └── package.json
 │
 └── .env
+
+
+npm install @supabase/supabase-js axios react-router-dom
+npm install express cors dotenv jsonwebtoken jwk-to-pem @supabase/supabase-js
