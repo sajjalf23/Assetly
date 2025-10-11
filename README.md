@@ -55,3 +55,4 @@ project-root/
 npm install @supabase/supabase-js axios react-router-dom
 npm i nodemon
 npm install express cors dotenv jsonwebtoken jwk-to-pem @supabase/supabase-js helmet express-rate-limit bcryptjs
+npm install axios react-router-dom  react-toastify
