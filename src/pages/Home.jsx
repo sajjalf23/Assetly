@@ -39,7 +39,12 @@ export default function Home()
                     
                     {/* { right-side main widget} */}
                     <div>
-                        <div className="rounded-2xl p-7 bg-[#181818]">
+                        <motion.div 
+                            initial = {{ opacity: 0, x: +50 }}
+                            whileInView = {{ opacity: 1, x: 0 }}
+                            transition = {{ duration: 0.6, delay: 0.1 }}
+                            viewport = {{ once: false }}
+                            className="rounded-2xl p-7 bg-[#181818]">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-white/70">Net Worth</p>
@@ -69,10 +74,15 @@ export default function Home()
                                 <hr className="mt-6 text-white/5"></hr>
                                 <div className="mt-3 pt-4 text-sm text-white/60">Quick actions: <span className="ml-2">Add account • Import CSV • Connect Exchange</span></div>
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* {right-side 3 widgets of crypto, stocks, forex} */}
-                        <div className="mt-8 grid md:grid-cols-3 gap-4">
+                        <motion.div 
+                            className="mt-8 grid md:grid-cols-3 gap-4"
+                            initial = {{ opacity: 0, y: 50 }}
+                            whileInView = {{ opacity: 1, y: 0 }}
+                            transition = {{ duration: 0.6, delay: 0.1 }}
+                            viewport = {{ once: false }}>
                             <div className="p-4 rounded-lg bg-white/5">
                                 <div className="text-sm text-white/60">BTC/USD</div>
                                 <div className="text-lg font-semibold">$27,120</div>
@@ -88,7 +98,7 @@ export default function Home()
                                 <div className="text-lg font-semibold">$1.0823</div>
                                 <div className="text-sm text-[#ff0000]">-0.2%</div>
                             </div>
-                        </div>
+                        </motion.div>
                     </div>
                 </section>
 
