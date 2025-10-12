@@ -1,6 +1,7 @@
 import { FiFacebook, FiTwitter, FiInstagram, FiLinkedin } from 'react-icons/fi'
 import features from '../data/features';
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 
 export default function Home()
 {
@@ -12,7 +13,7 @@ export default function Home()
         console.log(email);
         // store the email in backend. First send a welcome email 00e238 39c14d
     }
-    
+
     return (
         <div className="bg-[#0c0c0c]">
             <header className="flex items-center justify-between p-4">
@@ -93,8 +94,15 @@ export default function Home()
 
                 {/* {Features} */}
                 <section className="mt-20 mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-white">
-                    {features.map((feature) => (
-                        <div className='relative p-6 bg-white/5 rounded-2xl transition-transform transform duration-300 hover:scale-110 hover:shadow-lg cursor-pointer'>
+                    {features.map((feature, index) => (
+                        <motion.div 
+                            key={index}
+                            className='relative p-6 bg-white/5 rounded-2xl cursor-pointer'
+                            initial = {{ opacity: 0, x: -50 }}
+                            whileInView= {{ opacity: 1, x: 0 }}
+                            whileHover= {{ scale: 1.05, boxShadow: "0 10px 20px rgba(255,255,255,0.2)" }}
+                            transition = {{ duration: 0.6, delay: 0.1 }}
+                            viewport = {{ once: false }}>
                             
                             {/* {Icon} */}
                             <div className='absolute top-6 left-6 rounded-lg p-3 bg-white/60 text-black'>{feature.icon}</div>
@@ -102,7 +110,7 @@ export default function Home()
                             {/* {Heading and description of features} */}
                             <div className='text-xl font-semibold mt-16'>{feature.title}</div>
                             <div className='text-sm mt-4 text-white/60'>{feature.description}</div>
-                        </div>
+                        </motion.div>
                     ))}
                 </section>
 
