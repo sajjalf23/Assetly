@@ -98,8 +98,8 @@ export default function Home()
                         <motion.div 
                             key={index}
                             className='relative p-6 bg-white/5 rounded-2xl cursor-pointer'
-                            initial = {{ opacity: 0, x: -50 }}
-                            whileInView= {{ opacity: 1, x: 0 }}
+                            initial = {{ opacity: 0, y: +50 }}
+                            whileInView= {{ opacity: 1, y: 0 }}
                             whileHover= {{ scale: 1.05, boxShadow: "0 10px 20px rgba(255,255,255,0.2)" }}
                             transition = {{ duration: 0.6, delay: 0.1 }}
                             viewport = {{ once: false }}>
