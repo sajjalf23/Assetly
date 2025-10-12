@@ -15,8 +15,8 @@ export default function Home()
     }
 
     return (
-        <div className="bg-[#0c0c0c]">
-            <header className="flex items-center justify-between p-4">
+        <div className="bg-[#0c0c0c] overflow-x-hidden">
+            <header className="flex items-center justify-between p-4 sticky top-0 z-50 bg-[#0c0c0c]">
                 <img src = "/brandlogo.jpg" className="w-50"></img>
                 <nav className="flex gap-4">
                     <button className="px-4 py-2 mr-2 rounded-md text-white cursor-pointer">Login</button>
