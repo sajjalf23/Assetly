@@ -57,4 +57,5 @@ npm i nodemon
 npm install express cors dotenv jsonwebtoken jwk-to-pem @supabase/supabase-js helmet express-rate-limit bcryptjs
 npm install axios react-router-dom  react-toastify
 
-npm install react-icons
+npm install react-icons     // for icons
+npm install framer-motion   // for animations
