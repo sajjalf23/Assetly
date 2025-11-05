@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+/* Hide only the duplicate top horizontal grid line */
+.recharts-cartesian-grid-horizontal line:last-child {
+  display: none;
+}
+
+.recharts-wrapper:focus,
+.recharts-surface:focus {
+  outline: none !important;
+}
