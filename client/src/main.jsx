@@ -6,11 +6,11 @@ import App from './App.jsx'
 import { AppContextProvider } from './Context/appContextProvider.jsx';
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
+    
       <AppContextProvider>
         <App />
       </AppContextProvider>
-    </BrowserRouter>
+    
   </StrictMode>
 );
 
