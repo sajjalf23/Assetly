@@ -22,7 +22,7 @@ export const verifySupabaseToken = async (req, res, next) => {
 
     next(); 
   } catch (err) {
-    console.error("Error verifying Supabase token:", err);
+    // console.error("Error verifying Supabase token:", err);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
