@@ -11,6 +11,8 @@ import Earnings from './Pages/Earnings';
 import Navbar from './components/Navbar';
 import LandingPage from './Pages/LandingPage';
 import Home from './Pages/Home';
+import Forex from './Pages/Forex';
+
 
 // inner component that can safely use useLocation
 const AppContent = () => {
@@ -48,6 +50,7 @@ const AppContent = () => {
           <Routes>
             <Route path="/earnings" element={<Earnings />} />
             <Route path="/home" element={<Home/>} />
+            <Route path="/forex" element={<Forex />} />
           </Routes>
         </div>
       </div>
