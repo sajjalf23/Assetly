@@ -5,6 +5,7 @@ import helmet from "helmet"
 import ratelimit from "express-rate-limit"
 import authRouter from "./routes/authRouter.js"
 import forexController from './routes/forexRoute.js'
+import cryptoController from './routes/cryptoRoute.js'
 
 dotenv.config();
 
@@ -31,7 +32,8 @@ app.get("/",(req,res)=>{
 })
 
 app.use('/api/auth',authRouter);
-app.use('/api/forex', forexController)
+app.use('/api/forex', forexController);
+app.use('/api/crypto', cryptoController);
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT , ()=> console.log(`server is running at port : ${PORT}`))
