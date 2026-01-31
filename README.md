@@ -4,6 +4,14 @@
 
 ---
 
+## Status
+
+- Project is **70% completed**  
+- Latest branch : **version-9**
+- Assetly is under progress
+
+---
+
 ## Features
 
 - **Stocks**: View detailed stock information.  
@@ -22,14 +30,6 @@
 - **APIs**: Finnhub for news, various exchange APIs for crypto & forex data
 - React & Tailwind
 - Nodejs & express.js
-
----
-
-## Status
-
-- Project is **70% completed**  
-- Latest version: **v9**
-- Assetly is under progress
 
 ---
 
