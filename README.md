@@ -1,15 +1,35 @@
 # Assetly
 
-Assetly 
-shows ur Stocks details
-shows ur Forex details using exchange api keys
-Shows ur crypto details using ( wallet, binnace exchnage api keys, coinbase exchange keys, kucoin exchange api keys)
-shows news of crypto, forex & stocks using Finnhub api
-shows overview of ur portfolio over time
-shows transactions history 
-shows Earnings over time
-use Supabase for auth & postgress SQL 
+**Assetly** is a comprehensive personal finance dashboard that tracks your **stocks, forex, and cryptocurrency portfolios**, along with news and analytics.
 
-Assetly is under progress (70 % completed)
-version-9 is the most upadated one 
+---
+
+## Features
+
+- **Stocks**: View detailed stock information.  
+- **Forex**: Access forex rates using your exchange API keys.  
+- **Cryptocurrency**: Track crypto holdings via wallets or exchange APIs like Binance, Coinbase, and KuCoin.  
+- **News**: Get the latest news for crypto, forex, and stocks using the Finnhub API.  
+- **Portfolio Overview**: Analyze your portfolio performance over time.  
+- **Transaction History**: Keep a record of all your transactions.  
+- **Earnings**: Monitor earnings growth over time.
+- and many more features
+---
+
+## Technology Stack
+
+- **Backend / Database**: Supabase (Auth & PostgreSQL)  
+- **APIs**: Finnhub for news, various exchange APIs for crypto & forex data
+- React & Tailwind
+- Nodejs & express.js
+
+---
+
+## Status
+
+- Project is **70% completed**  
+- Latest version: **v9**
+- Assetly is under progress
+
+---
 
