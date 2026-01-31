@@ -4,10 +4,9 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip
 } from 'recharts';
 import { LuSearch } from "react-icons/lu";
-import { motion } from 'framer-motion';
 
-// Colors for chart
-const COLORS = ["#2775ca", "#f7931a", "#00d09c", "#62688f", "#f0b90b", "#6747ed", "#50af95", "#ff6b6b"];
+// Colors to match Forex page
+const COLORS = ["#2285c3", "#c35f22", "#c38d22", "#227c5d", "#8c22c3", "#c3225f"];
 
 // Common crypto symbols to CoinGecko ID mapping
 const COIN_MAPPING = {
@@ -29,7 +28,6 @@ const COIN_MAPPING = {
   'XAUT': 'tether-gold',
   'EURC': 'euro-coin',
   'PORT': 'port-finance',
-  // Add more as needed
 };
 
 // Get CoinGecko ID from symbol
@@ -43,9 +41,9 @@ const CustomToolTip = ({ active, payload, total }) => {
   if (active && payload?.length) {
     const crypto = payload[0];
     return (
-      <div className='bg-[#2a2a2a] p-3 rounded-lg border border-gray-700 shadow-xl'>
+      <div className='bg-[#3a3a3a] p-2 rounded-lg shadow-lg'>
         <p className='font-semibold text-white'>{crypto.name}</p>
-        <p className='text-lg text-[#f7931a] font-medium'>
+        <p className='text-white font-medium'>
           ${crypto.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </p>
         <p className='text-sm text-gray-300'>
@@ -62,11 +60,9 @@ const CustomToolTipLine = ({ active, payload }) => {
   if (active && payload?.length) {
     const crypto = payload[0].payload;
     return (
-      <div className='bg-[#2a2a2a] p-3 rounded-lg border border-gray-700 shadow-xl'>
+      <div className='bg-[#3a3a3a] p-2 rounded-lg shadow-lg'>
         <p className='font-semibold text-white mb-1'>{crypto.name}</p>
-        <p className='text-[#f7931a] font-medium'>
-          Price: ${crypto.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-        </p>
+        <p className='text-white font-medium'>Price: ${crypto.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
         {crypto.change24h != null && (
           <p className={`text-sm ${crypto.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             24h: {crypto.change24h >= 0 ? '+' : ''}{crypto.change24h.toFixed(2)}%
@@ -86,22 +82,14 @@ export default function CryptoDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch all crypto prices in a single call
+  // all crypto prices
   const fetchCryptoPrices = async (symbols) => {
     try {
-      // Get unique CoinGecko IDs
       const coinIds = [...new Set(symbols.map(symbol => getCoinId(symbol)))];
-      
-      // Make a single API call for all coins
       const res = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd&include_24h_change=true`
       );
-      
-      if (!res.ok) {
-        console.warn('Failed to fetch crypto prices, using fallback data');
-        return null;
-      }
-      
+      if (!res.ok) return null;
       return await res.json();
     } catch (error) {
       console.error('Error fetching crypto prices:', error);
@@ -109,106 +97,77 @@ export default function CryptoDashboard() {
     }
   };
 
-  // Fetch data from backend API
+  //portfolio data from backend
   const fetchCryptoData = async () => {
     setIsLoading(true);
     try {
-      // Fetch portfolio data from your backend
       const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      const portfolioRes = await fetch(`${apiUrl}/api/crypto/trades`);
-      
-      if (!portfolioRes.ok) {
-        throw new Error("Failed to fetch portfolio data");
-      }
-      
-      const portfolioJson = await portfolioRes.json();
-      console.log("Portfolio data:", portfolioJson);
-      
-      // Process portfolio data
-      const portfolioItems = portfolioJson.portfolio || [];
-      
-      // Filter out assets with zero or negative amount for display
-      const validPortfolioItems = portfolioItems
-        .filter(item => item.amount > 0)
-        .slice(0, 20); // Limit to top 20 assets to avoid too many API calls
-      
-      // Extract symbols for price lookup
+      const res = await fetch(`${apiUrl}/api/crypto/trades`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch portfolio data");
+
+      const json = await res.json();
+      const portfolioItems = json.portfolio || [];
+
+      const validPortfolioItems = portfolioItems.filter(item => item.amount > 0).slice(0, 20);
       const symbols = validPortfolioItems.map(item => item.asset);
-      
-      // Fetch prices in a single API call
       const pricesData = await fetchCryptoPrices(symbols);
-      
-      // Process portfolio with prices
+
       const processedPortfolio = validPortfolioItems.map(item => {
         const coinId = getCoinId(item.asset);
-        const priceData = pricesData ? pricesData[coinId] : null;
-        
-        const price = priceData?.usd || 1; // Default to $1 if price not found
+        const priceData = pricesData?.[coinId];
+        const price = priceData?.usd || 1;
         const change24h = priceData?.usd_24h_change || 0;
         const value = price * Math.abs(item.amount);
-        
         return {
           symbol: item.asset.toUpperCase(),
           name: item.asset,
           amount: item.amount,
-          price: price,
-          change24h: change24h,
-          value: value,
+          price,
+          change24h,
+          value,
           tradeCount: item.tradeCount
         };
       });
-      
-      // Sort by value descending
+
       const sortedPortfolio = processedPortfolio.sort((a, b) => b.value - a.value);
-      
+
       setPortfolioData(sortedPortfolio);
       setTotal(sortedPortfolio.reduce((sum, item) => sum + item.value, 0));
-      
+
       // Fetch top market data for charts
       try {
         const marketRes = await fetch(
           'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=8&page=1&sparkline=false'
         );
-        
         if (marketRes.ok) {
           const marketData = await marketRes.json();
-          
-          // Top 4 coins for Market Overview
-          const top4 = marketData.slice(0, 4).map(c => ({
+          setChartData(marketData.slice(0, 4).map(c => ({
             symbol: c.symbol.toUpperCase(),
             name: c.name,
             price: c.current_price,
             change24h: c.price_change_percentage_24h
-          }));
-          
-          setChartData(top4);
-          
-          // Top 8 coins for Line Chart
-          const top8 = marketData.slice(0, 8).map(c => ({
+          })));
+          setLineData(marketData.slice(0, 8).map(c => ({
             symbol: c.symbol.toUpperCase(),
             name: c.name,
             price: c.current_price,
             change24h: c.price_change_percentage_24h
-          }));
-          
-          setLineData(top8);
+          })));
         }
-      } catch (marketError) {
-        console.warn('Market data fetch failed, using portfolio data for charts');
-        // Use portfolio data for charts if market fetch fails
-        const topPortfolio = sortedPortfolio.slice(0, 8);
-        setChartData(topPortfolio.slice(0, 4));
-        setLineData(topPortfolio);
+      } catch {
+        setChartData(sortedPortfolio.slice(0, 4));
+        setLineData(sortedPortfolio.slice(0, 8));
       }
-      
+
     } catch (err) {
       console.error("Error fetching data:", err);
-      // Keep existing data or set empty arrays
-      if (!portfolioData.length) {
-        setPortfolioData([]);
-        setChartData([]);
-        setLineData([]);
-      }
+      setPortfolioData([]);
+      setChartData([]);
+      setLineData([]);
     } finally {
       setIsLoading(false);
     }
@@ -216,8 +175,6 @@ export default function CryptoDashboard() {
 
   useEffect(() => {
     fetchCryptoData();
-    
-    // Refresh data every 60 seconds
     const interval = setInterval(fetchCryptoData, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -227,198 +184,163 @@ export default function CryptoDashboard() {
     c.symbol.toLowerCase().includes(query) ||
     c.name.toLowerCase().includes(query)
   );
-
   const displayData = searchQuery ? filteredData : portfolioData;
 
   return (
-    <div className='min-h-screen bg-[#0d0d0d] text-white p-4 md:p-6 pt-20'>
-      <h1 className='text-3xl font-bold mb-8'>Crypto Dashboard</h1>
+    <div className='flex flex-col'>
+  <div className='min-h-screen bg-[#0d0d0d] text-white flex flex-col p-6 gap-8 pt-10'>
 
-      {/* Main grid */}
-      <div className='grid lg:grid-cols-2 gap-6 mb-8'>
-
-        {/* Market Overview Full Width */}
-        <motion.div
-          className='bg-[#181818] p-6 rounded-2xl shadow-lg mb-6 lg:col-span-2'
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h2 className='text-xl font-bold mb-4'>Market Overview</h2>
-          {isLoading ? (
-            <div className="flex justify-center h-32 items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f7931a]"></div>
+    {/* Full Width Market Overview */}
+    <div className='bg-[#181818] p-6 rounded-2xl shadow-lg w-full'>
+      <h2 className='text-lg font-bold'>Market Overview</h2>
+      {isLoading ? (
+        <div className="flex justify-center h-32 items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2285c3]"></div>
+        </div>
+      ) : chartData.length === 0 ? (
+        <div className="text-center text-gray-400 py-8">No market data available</div>
+      ) : (
+        <div className='grid grid-cols-2 sm:grid-cols-4 gap-5 pt-6'>
+          {chartData.map((c, i) => (
+            <div key={i}>
+              <p className='text-sm text-[#ababab]'>{c.name}</p>
+              <p className='text-lg font-semibold' style={{ color: COLORS[i % COLORS.length] }}>
+                ${c.price < 1 ? c.price.toFixed(6) : c.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className={c.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>
+                {c.change24h >= 0 ? '+' : ''}{c.change24h.toFixed(2)}%
+              </p>
             </div>
-          ) : chartData.length === 0 ? (
-            <div className="text-center text-gray-400 py-8">
-              No market data available
+          ))}
+        </div>
+      )}
+    </div>
+
+    {/* Two Columns Row */}
+    <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
+
+      {/* Left Column: Crypto Price Trend */}
+      <div className='bg-[#181818] p-6 rounded-2xl shadow-lg'>
+        <h2 className='text-xl font-semibold mb-4 text-white'>Crypto Asset Trend</h2>
+        <div className='h-[280px]'>
+          {lineData.length === 0 ? (
+            <div className='flex justify-center items-center h-full text-gray-400'>
+              {isLoading ? <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2285c3]"></div> : 'No data'}
             </div>
           ) : (
-            <div className='grid grid-cols-2 sm:grid-cols-4 gap-5'>
-              {chartData.map((c, i) => (
-                <div key={i} className='p-3 bg-[#222] rounded-lg hover:bg-[#2a2a2a] transition-colors'>
-                  <p className='text-sm text-gray-400 mb-1'>{c.symbol}</p>
-                  <p className='text-lg font-semibold' style={{ color: COLORS[i] }}>
-                    ${c.price < 1 ? c.price.toFixed(6) : c.price.toFixed(2)}
-                  </p>
-                  <p className={c.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>
-                    {c.change24h >= 0 ? '+' : ''}{c.change24h.toFixed(2)}%
-                  </p>
-                </div>
-              ))}
-            </div>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={lineData}>
+                <XAxis dataKey="symbol" stroke="#aaa" interval={0} tick={{ fontSize: 12 }} padding={{ left: 20, right: 20 }} />
+                <YAxis stroke="#aaa" tick={{ fontSize: 12 }} />
+                <Tooltip content={<CustomToolTipLine />} />
+                <Line type="monotone" dataKey="price" stroke="#2285c3" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: "#fff" }} />
+              </LineChart>
+            </ResponsiveContainer>
           )}
-        </motion.div>
-
-        {/* Left Column */}
-        <div className='flex flex-col gap-6'>
-          {/* Price Trend */}
-          <motion.div className='bg-[#181818] p-6 rounded-2xl shadow-lg' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <div className='flex justify-between items-center mb-4'>
-              <h2 className='text-xl font-semibold'>Price Trend</h2>
-            </div>
-            <div className='h-56'>
-              {lineData.length === 0 ? (
-                <div className='flex justify-center items-center h-full text-gray-400'>No data</div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={lineData}>
-                    <XAxis dataKey="symbol" stroke="#666" axisLine={false} tickLine={false} />
-                    <YAxis stroke="#666" axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
-                    <Tooltip content={<CustomToolTipLine />} />
-                    <Line type="monotone" dataKey="price" stroke="#f7931a" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </motion.div>
         </div>
-
-        {/* Right Column - Portfolio Distribution */}
-        <motion.div className='bg-[#181818] p-6 rounded-2xl shadow-lg flex flex-col items-center' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <h2 className='text-xl font-semibold mb-4 self-start'>Portfolio Distribution</h2>
-          <div className='relative w-full max-w-md h-72'>
-            {displayData.length === 0 ? (
-              <div className='flex justify-center items-center h-full text-gray-400'>
-                {isLoading ? (
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f7931a]"></div>
-                ) : (
-                  'No portfolio data'
-                )}
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie 
-                    data={displayData} 
-                    dataKey="value" 
-                    nameKey="symbol" 
-                    innerRadius={60} 
-                    outerRadius={100} 
-                    labelLine={false} 
-                    label={(entry) => `${entry.symbol}: ${total ? ((entry.value / total) * 100).toFixed(1) : 0}%`}
-                  >
-                    {displayData.map((entry, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomToolTip total={total} />} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-            <div className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center'>
-              <div className='text-2xl font-bold'>${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-              <div className='text-gray-400 text-sm'>Total Portfolio Value</div>
-              <div className='text-sm text-gray-500 mt-1'>{displayData.length} assets</div>
-            </div>
-          </div>
-        </motion.div>
       </div>
 
-      {/* Crypto Assets Table */}
-      <motion.div className='bg-[#181818] rounded-2xl p-6 shadow-lg' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-        <div className='flex justify-between mb-4 gap-4'>
-          <h2 className='text-2xl font-semibold'>Crypto Assets</h2>
-          <div className='flex items-center gap-3 bg-[#222] p-2 rounded-lg w-full sm:w-80'>
-            <LuSearch size={20} className='text-gray-400' />
-            <input 
-              placeholder='Search assets...' 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-              className='bg-transparent text-white w-full focus:outline-none' 
-            />
-          </div>
+      {/* Right Column: Portfolio Distribution */}
+      <div className='bg-[#181818] p-6 rounded-2xl shadow-lg flex flex-col'>
+        <div className='relative w-full h-[280px]'>
+          {displayData.length === 0 ? (
+            <div className='flex justify-center items-center h-full text-gray-400'>
+              {isLoading ? <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2285c3]"></div> : 'No portfolio data'}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 20, bottom: 20 }}>
+                <Pie
+                  data={displayData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={75}
+                  outerRadius={120}
+                  paddingAngle={0}
+                  dataKey="value"
+                  label={(entry) => entry.symbol}
+                  labelLine={false}
+                  stroke="none"
+                >
+                  {displayData.map((entry, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomToolTip total={total} />} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+          {displayData.length > 0 && (
+            <div className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center'>
+              <div className='text-white text-2xl font-semibold'>
+                ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+          )}
         </div>
-        <div className='overflow-x-auto'>
-          <table className='w-full min-w-[800px]'>
-            <thead className='text-gray-400 bg-[#1f1f1f] text-sm'>
-              <tr>
-                <th className='py-3 px-4 text-left'>Asset</th>
-                <th className='py-3 px-4 text-right'>Amount</th>
-                <th className='py-3 px-4 text-right'>Price</th>
-                <th className='py-3 px-4 text-right'>24h Change</th>
-                <th className='py-3 px-4 text-right'>Value</th>
-                <th className='py-3 px-4 text-right'>% Portfolio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan="6" className='py-8 text-center'>
-                    <div className="flex justify-center items-center space-x-2">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#f7931a]"></div>
-                      <span>Loading portfolio data...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : displayData.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className='py-8 text-center text-gray-400'>
-                    No assets found in your portfolio
-                  </td>
-                </tr>
-              ) : displayData.map((row, i) => (
-                <tr key={i} className='border-b border-[#2a2a2a] hover:bg-[#202020] transition-colors'>
-                  <td className='py-4 px-4 flex items-center gap-3'>
-                    <div 
-                      className='rounded-full h-3 w-3' 
-                      style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                    ></div>
-                    <div>
-                      <div className='font-medium'>{row.symbol}</div>
-                      <div className='text-xs text-gray-400'>{row.name}</div>
-                    </div>
-                  </td>
-                  <td className='py-4 px-4 text-right'>
-                    {row.amount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
-                  </td>
-                  <td className='py-4 px-4 text-right'>
-                    ${row.price < 1 ? row.price.toFixed(6) : row.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className='py-4 px-4 text-right'>
-                    <div className={row.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>
-                      {row.change24h >= 0 ? '+' : ''}{row.change24h.toFixed(2)}%
-                    </div>
-                  </td>
-                  <td className='py-4 px-4 text-right'>
-                    ${row.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className='py-4 px-4 text-right'>
-                    {total ? ((row.value / total) * 100).toFixed(2) : '0.00'}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {!isLoading && displayData.length > 0 && (
-          <div className='mt-4 text-sm text-gray-400'>
-            Showing {displayData.length} asset{displayData.length !== 1 ? 's' : ''} • 
-            Total Portfolio Value: <span className='text-white font-medium ml-1'>
-              ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-        )}
-      </motion.div>
+      </div>
     </div>
+
+    {/* Crypto Assets Table (Styled Like Forex) */}
+    <div className="mx-full max-w-6xl px-6">
+      <div className='flex items-center justify-between mb-3'>
+        <h1 className='text-white font-semibold text-xl'> All Assets</h1>
+        <div className='flex items-center gap-3 bg-[#181818] p-2 rounded-md w-full sm:w-1/4'>
+          <LuSearch size={20} className='text-white' />
+          <input
+            type='text'
+            placeholder='Search Assets'
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            spellCheck={false}
+            className='bg-transparent text-white w-full focus:outline-none placeholder-gray-400'
+          />
+        </div>
+      </div>
+
+      <div className='rounded-2xl overflow-hidden bg-[#181818] mt-6 mb-12 overflow-x-auto'>
+        <table className='w-full'>
+          <thead className='text-sm font-medium text-[#ababab] bg-[#1f1f1f]'>
+            <tr>
+              <th className='pl-10 py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none'>Asset</th>
+              <th className='py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>Amount</th>
+              <th className='py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>Price</th>
+              <th className='py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>24h Change</th>
+              <th className='py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>Value</th>
+              <th className='pr-5 py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>% of Portfolio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayData.map((row, index) => (
+              <tr key={index} className='text-sm text-white border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#202020]'>
+                <td className='py-2.5 px-4 select-none flex items-center gap-3'>
+                  <div className='rounded-full h-3 w-3' style={{ background: COLORS[index % COLORS.length] }}></div>
+                  {row.symbol}
+                </td>
+                <td className='py-3 px-4 text-right select-none'>{row.amount.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
+                <td className='py-3 px-4 text-right select-none'>
+                  ${row.price < 1 ? row.price.toFixed(6) : row.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className='py-3 px-4 text-right select-none'>
+                  <span className={row.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>
+                    {row.change24h >= 0 ? '+' : ''}{row.change24h.toFixed(2)}%
+                  </span>
+                </td>
+                <td className='py-3 px-4 text-right select-none'>
+                  ${row.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className='py-3 px-4 pr-5 text-right select-none'>
+                  {total ? ((row.value / total) * 100).toFixed(2) : '0.00'}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
   );
 }

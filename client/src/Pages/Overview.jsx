@@ -176,7 +176,7 @@ export default function Overview() {
     setPieChartDate(newDate);
   };
 
-  // Quick date selections for pie chart
+  // date selections for pie chart
   const handleQuickSelect = (option) => {
     const today = new Date();
     let newDate = today;
