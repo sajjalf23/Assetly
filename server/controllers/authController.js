@@ -96,20 +96,7 @@ export const googleLogin = async (req, res) => {
     }
 }
 
-// export const logout = async (req, res) => {
-//     try {
-//         const { error } = await supabase.auth.signOut()
-//         if (error)
-//             throw error
-//         res.status(200).json({
-//             success: true,
-//             message: 'Successfully Logged Out',
-//         })
-//     } catch (err) {
-//         console.error(err)
-//         res.status(500).json({ error: err.message })
-//     }
-// }
+
 
 export const logout = async (req, res) => {
   try {
@@ -155,56 +142,6 @@ export const resetpassword = async( req, res)=>{
     }
 }
 
-// export const getUser = async (req, res) => {
-//   try {
-//     const user = req.user; 
-
-//     if (!user) {
-//       return res.status(401).json({ success: false, message: "User not authenticated" });
-//     }
-     
-//     const flatUser = {
-//       id: user.id,
-//       email: user.email,
-//       username: user.user_metadata?.username || null,
-//     };
-
-//     res.status(200).json({
-//       success: true,
-//       user : flatUser,
-//     });
-    
-//   } catch (err) {
-//     console.error("Error fetching user:", err);
-//     res.status(500).json({ success: false, message: "Internal Server Error" });
-//   }
-// };
-
-// export const getUser = async (req, res) => {
-//   try {
-//     const user = req.user; 
-
-//     if (!user) {
-//       return res.status(401).json({ success: false, message: "User not authenticated" });
-//     }
-
-//     // Supabase stores custom data in `user_metadata`
-//     const flatUser = {
-//       id: user.sub, // decoded JWT has `sub` as user id
-//       email: user.email,
-//       username: user.user_metadata?.username || user.user_metadata?.name || null,
-//     };
-
-//     res.status(200).json({
-//       success: true,
-//       user: flatUser,
-//     });
-    
-//   } catch (err) {
-//     console.error("Error fetching user:", err);
-//     res.status(500).json({ success: false, message: "Internal Server Error" });
-//   }
-// };
 
 export const getUser = (req, res) => {
   try {
@@ -224,22 +161,3 @@ export const getUser = (req, res) => {
   }
 };
 
-
-// export const getUser = async (req, res) => {
-//   try {
-
-//     if (!req.user)
-//       return res.status(401).json({ success: false, message: "User not authenticated" });
-
-//     const flatUser = {
-//       id: req.user.sub || req.user.id,
-//       email: req.user.email,
-//       username: req.user.user_metadata?.username || null,
-//     };
-
-//     res.status(200).json({ success: true, user: flatUser });
-//   } catch (err) {
-//     console.error("Error fetching user:", err);
-//     res.status(500).json({ success: false, message: "Internal Server Error" });
-//   }
-// };

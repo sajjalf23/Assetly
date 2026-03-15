@@ -165,12 +165,12 @@ export default function News() {
         </div>
       ) : filteredNews.length === 0 ? (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center py-20 bg-[#181818] rounded-2xl"
+          // initial={{ opacity: 0, scale: 0.9 }}
+          // animate={{ opacity: 1, scale: 1 }}
+          // className="text-center py-20 bg-[#181818] rounded-2xl"
         >
-          <div className="text-white text-sm font-semibold mb-2">No news found</div>
-          <div className="text-[#ababab] text-sm">Try adjusting your filters or search query</div>
+          {/* <div className="text-white text-sm font-semibold mb-2"></div>
+          <div className="text-[#ababab] text-sm"></div> */}
         </motion.div>
       ) : (
         <motion.div

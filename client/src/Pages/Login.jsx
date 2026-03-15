@@ -28,6 +28,7 @@ const Login = () => {
 
       if (data.success) {
         toast.success("Login successful!");
+        console.log("Login response data:", data);
         getUserData(data.session?.access_token);
         setIsLoggedIn(true);
         if (data.session?.access_token) {

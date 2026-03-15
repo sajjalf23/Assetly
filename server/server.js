@@ -8,12 +8,18 @@ import newsRouter from "./routes/newsRouter.js"
 import forexRouter from "./routes/forexRouter.js"
 import cryptoRouter from "./routes/cryptoRouter.js"
 import stocksRouter from "./routes/stocksRouter.js"
+import accountRouter from "./routes/accountRouter.js"
 
 dotenv.config();
 
 const app = express();
 
-app.use(helmet());
+// app.use(helmet());
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  hsts: false, // Disable HSTS (HTTPS forcing)
+}));
 
 app.use(cors({
   origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",  
@@ -38,6 +44,7 @@ app.use('/api/news', newsRouter);
 app.use('/api/forex', forexRouter);
 app.use('/api/crypto', cryptoRouter);
 app.use('/api/stocks',stocksRouter);
+app.use('/api/account', accountRouter);
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT , ()=> console.log(`server is running at port : ${PORT}`))

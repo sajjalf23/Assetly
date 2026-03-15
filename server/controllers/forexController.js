@@ -20,6 +20,7 @@ export const getForexTrades = async (req, res) => {
     }
 
     const data = await response.json();
+    console.log("Forex Trades Data:", data);
     res.status(200).json(data);
 
   } catch (error) {
