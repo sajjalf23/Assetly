@@ -6,8 +6,8 @@
 
 ## Status
 
-- Project is **70% completed**  
-- Latest branch : **version-12**
+- Project is **80% completed**  
+- Latest branch : **version-14**
 - Assetly is under progress
 
 ---
