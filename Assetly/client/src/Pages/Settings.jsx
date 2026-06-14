@@ -1,12 +1,14 @@
 import { useState, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import API from "../Api/axios";
+import { toast } from "react-toastify";
 import { AppContext } from '../context/appContext';
-import { FaUser, FaSlidersH, FaShieldAlt, FaDatabase, FaLock } from 'react-icons/fa';
+import { FaUser, FaSlidersH, FaShieldAlt, FaDatabase, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { MdRefresh } from 'react-icons/md';
 
 export default function Settings() {
-    const { userData, toast, BackendUrl } = useContext(AppContext);
-    const [activeTab, setActiveTab] = useState('preferences'); 
+    const { userData } = useContext(AppContext);
+    const [activeTab, setActiveTab] = useState('preferences');
     const [currency, setCurrency] = useState('USD');
     const [refreshInterval, setRefreshInterval] = useState('60');
     const [loadingDiagnostics, setLoadingDiagnostics] = useState(false);
@@ -19,13 +21,18 @@ export default function Settings() {
     });
     const [updatingPassword, setUpdatingPassword] = useState(false);
 
+    // State for toggling password field visibility
+    const [showCurrent, setShowCurrent] = useState(false);
+    const [showNew, setShowNew] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+
     const handlePasswordChange = (e) => {
         setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
     };
 
     const submitPasswordUpdate = async (e) => {
         e.preventDefault();
-        
+
         if (passwordData.newPassword !== passwordData.confirmPassword) {
             if (toast) toast.error("New passwords do not match!");
             return;
@@ -33,17 +40,22 @@ export default function Settings() {
 
         setUpdatingPassword(true);
         try {
-            // Placeholder for your backend call matching your context architecture
-            // const res = await axios.post(`${BackendUrl}/api/user/change-password`, passwordData, { headers: { token } });
-            
-            setTimeout(() => {
-                setUpdatingPassword(false);
+            const { data } = await API.post(`/api/auth/changePassword`, passwordData);
+
+            if (data.success) {
+                toast.success("Password updated successfully");
                 setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                if (toast) toast.success("Password updated successfully!");
-            }, 1000);
+                setShowCurrent(false);
+                setShowNew(false);
+                setShowConfirm(false);
+            } else {
+                toast.error(data.message || "Password Change Failed!");
+            }
+
         } catch (error) {
-            setUpdatingPassword(false);
             if (toast) toast.error(error.response?.data?.message || "Failed to update password");
+        } finally {
+            setUpdatingPassword(false);
         }
     };
 
@@ -62,9 +74,9 @@ export default function Settings() {
     return (
         <div className="bg-[#0d0d0d] min-h-screen pt-20 text-white w-full overflow-x-hidden">
             <div className="p-6 max-w-4xl mx-auto flex flex-col gap-6">
-                
+
                 {/* Header */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="border-b border-[#2a2a2a] pb-4"
@@ -74,25 +86,25 @@ export default function Settings() {
                 </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                    
+
                     {/* Sidebar Tabs */}
                     <div className="space-y-1 bg-[#181818] p-2.5 rounded-xl border border-[#2a2a2a]">
-                        <button 
+                        <button
                             onClick={() => setActiveTab('preferences')}
                             className={`w-full flex items-center gap-3 text-sm px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
-                                activeTab === 'preferences' 
-                                ? 'bg-[#202020] text-blue-400 border border-blue-500/20' 
-                                : 'text-[#ababab] hover:bg-[#202020] hover:text-white'
+                                activeTab === 'preferences'
+                                    ? 'bg-[#202020] text-blue-400 border border-blue-500/20'
+                                    : 'text-[#ababab] hover:bg-[#202020] hover:text-white'
                             }`}
                         >
                             <FaSlidersH size={16} /> App Preferences
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab('account')}
                             className={`w-full flex items-center gap-3 text-sm px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
-                                activeTab === 'account' 
-                                ? 'bg-[#202020] text-blue-400 border border-blue-500/20' 
-                                : 'text-[#ababab] hover:bg-[#202020] hover:text-white'
+                                activeTab === 'account'
+                                    ? 'bg-[#202020] text-blue-400 border border-blue-500/20'
+                                    : 'text-[#ababab] hover:bg-[#202020] hover:text-white'
                             }`}
                         >
                             <FaUser size={16} /> Account Security
@@ -102,7 +114,7 @@ export default function Settings() {
                     {/* Main Content Area */}
                     <div className="md:col-span-2 min-h-[400px]">
                         <AnimatePresence mode="wait">
-                            
+
                             {/* PREFERENCES TAB */}
                             {activeTab === 'preferences' && (
                                 <motion.div
@@ -117,11 +129,11 @@ export default function Settings() {
                                         <h3 className="text-sm font-semibold tracking-wide flex items-center gap-2 border-b border-[#2a2a2a] pb-2 text-gray-200">
                                             <FaSlidersH className="text-blue-400" /> Tracking Variables
                                         </h3>
-                                        
+
                                         <div className="flex flex-col gap-1">
                                             <label className="text-xs text-[#ababab]">Display Valuation Currency</label>
-                                            <select 
-                                                value={currency} 
+                                            <select
+                                                value={currency}
                                                 onChange={(e) => setCurrency(e.target.value)}
                                                 className="bg-[#202020] mt-1 border border-[#2a2a2a] rounded-lg text-sm px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                                             >
@@ -133,8 +145,8 @@ export default function Settings() {
 
                                         <div className="flex flex-col gap-1">
                                             <label className="text-xs text-[#ababab]">Exchange API Sync Intervals</label>
-                                            <select 
-                                                value={refreshInterval} 
+                                            <select
+                                                value={refreshInterval}
                                                 onChange={(e) => setRefreshInterval(e.target.value)}
                                                 className="bg-[#202020] mt-1 border border-[#2a2a2a] rounded-lg text-sm px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                                             >
@@ -196,45 +208,73 @@ export default function Settings() {
                                         <h3 className="text-sm font-semibold tracking-wide flex items-center gap-2 border-b border-[#2a2a2a] pb-2 text-gray-200">
                                             <FaLock className="text-red-400" /> Update Authentication Secret
                                         </h3>
-                                        
+
                                         <form onSubmit={submitPasswordUpdate} className="space-y-4 pt-1">
                                             <div className="flex flex-col gap-1.5">
                                                 <label className="text-xs text-[#ababab]">Current Password</label>
-                                                <input 
-                                                    type="password"
-                                                    name="currentPassword"
-                                                    required
-                                                    value={passwordData.currentPassword}
-                                                    onChange={handlePasswordChange}
-                                                    placeholder="••••••••"
-                                                    className="bg-[#202020] border border-[#2a2a2a] rounded-lg text-sm px-3 py-2 text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 transition-all"
-                                                />
+                                                <div className="relative w-full flex items-center">
+                                                    <input
+                                                        type={showCurrent ? "text" : "password"}
+                                                        name="currentPassword"
+                                                        required
+                                                        value={passwordData.currentPassword}
+                                                        onChange={handlePasswordChange}
+                                                        placeholder="••••••••"
+                                                        className="bg-[#202020] border border-[#2a2a2a] rounded-lg text-sm pl-3 pr-10 py-2 text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 transition-all w-full"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowCurrent(!showCurrent)}
+                                                        className="absolute right-3 text-[#ababab] hover:text-white transition-colors"
+                                                    >
+                                                        {showCurrent ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="flex flex-col gap-1.5">
                                                     <label className="text-xs text-[#ababab]">New Password</label>
-                                                    <input 
-                                                        type="password"
-                                                        name="newPassword"
-                                                        required
-                                                        value={passwordData.newPassword}
-                                                        onChange={handlePasswordChange}
-                                                        placeholder="••••••••"
-                                                        className="bg-[#202020] border border-[#2a2a2a] rounded-lg text-sm px-3 py-2 text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 transition-all"
-                                                    />
+                                                    <div className="relative w-full flex items-center">
+                                                        <input
+                                                            type={showNew ? "text" : "password"}
+                                                            name="newPassword"
+                                                            required
+                                                            value={passwordData.newPassword}
+                                                            onChange={handlePasswordChange}
+                                                            placeholder="••••••••"
+                                                            className="bg-[#202020] border border-[#2a2a2a] rounded-lg text-sm pl-3 pr-10 py-2 text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 transition-all w-full"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowNew(!showNew)}
+                                                            className="absolute right-3 text-[#ababab] hover:text-white transition-colors"
+                                                        >
+                                                            {showNew ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                                                        </button>
+                                                    </div>
                                                 </div>
+                                                
                                                 <div className="flex flex-col gap-1.5">
                                                     <label className="text-xs text-[#ababab]">Confirm New Password</label>
-                                                    <input 
-                                                        type="password"
-                                                        name="confirmPassword"
-                                                        required
-                                                        value={passwordData.confirmPassword}
-                                                        onChange={handlePasswordChange}
-                                                        placeholder="••••••••"
-                                                        className="bg-[#202020] border border-[#2a2a2a] rounded-lg text-sm px-3 py-2 text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 transition-all"
-                                                    />
+                                                    <div className="relative w-full flex items-center">
+                                                        <input
+                                                            type={showConfirm ? "text" : "password"}
+                                                            name="confirmPassword"
+                                                            required
+                                                            value={passwordData.confirmPassword}
+                                                            onChange={handlePasswordChange}
+                                                            placeholder="••••••••"
+                                                            className="bg-[#202020] border border-[#2a2a2a] rounded-lg text-sm pl-3 pr-10 py-2 text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 transition-all w-full"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowConfirm(!showConfirm)}
+                                                            className="absolute right-3 text-[#ababab] hover:text-white transition-colors"
+                                                        >
+                                                            {showConfirm ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
 

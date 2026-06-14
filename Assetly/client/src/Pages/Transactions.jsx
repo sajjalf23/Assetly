@@ -260,7 +260,7 @@ const Transactions = () => {
             className='bg-[#181818] text-sm text-[#ababab] p-2 rounded-md focus:outline-none border-none hover:bg-[#111] cursor-pointer'
           >
             <option value="">All Asset Classes</option>
-            <option value="crypto">Cryptoc</option>
+            <option value="crypto">Crypto</option>
             <option value="stock">Stocks</option>
             <option value="forex">Forex</option>
           </select>

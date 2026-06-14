@@ -1,6 +1,7 @@
 import express from "express";
 const authRouter = express.Router()
 import { register , signin , googleLogin, logout, resetpassword , getUser} from "../controllers/authController.js"
+import { changePassword } from "../controllers/changePasswordController.js"
 import { verifySupabaseToken } from "../middleware/verifySupabaseToken.js"
 
 authRouter.post("/register" ,register );
@@ -9,4 +10,5 @@ authRouter.get("/googleLogin" ,googleLogin);
 authRouter.post("/logout" ,verifySupabaseToken,logout);
 authRouter.post("/resetPassword" ,resetpassword);
 authRouter.get("/user", verifySupabaseToken, getUser);
+authRouter.post("/changePassword", changePassword);
 export default authRouter;
