@@ -3,18 +3,21 @@ import { AppContext } from '../context/appContext';
 import { LuSearch, LuRefreshCw, LuInfo } from "react-icons/lu";
 import { toast } from 'react-toastify';
 
-// Colors
+// Expanded Colors to cleanly map traditional finance brokers
 const PLATFORM_COLORS = {
   "Binance": "#F3BA2F",
   "KuCoin": "#24AE8F",
   "Coinbase": "#0052FF",
   "OANDA": "#00214A",
   "PaperInvest": "#d6ff35",
+  "Interactive Brokers": "#FF4500",
+  "MetaTrader": "#0078D7",
   "binance": "#F3BA2F",
   "kucoin": "#24AE8F",
   "coinbase": "#0052FF",
   "ethereum": "#627EEA",
-  "oanda": "#00214A"
+  "oanda": "#00214A",
+  "metatrader": "#0078D7"
 };
 
 const Transactions = () => {
@@ -28,6 +31,7 @@ const Transactions = () => {
   const [selectedDates, setSelectedDates] = useState("");
   const [selectedAccounts, setSelectedAccounts] = useState("");
   const [selectedTypes, setSelectedTypes] = useState("");
+  const [selectedAssetClass, setSelectedAssetClass] = useState(""); // 🟢 New state for stock/forex filtering
   const [refreshing, setRefreshing] = useState(false);
   const [cacheInfo, setCacheInfo] = useState(null);
 
@@ -110,6 +114,19 @@ const Transactions = () => {
     return amount >= 0 ? `+${formatted}` : `-${formatted}`;
   };
 
+  // 🟢 Custom formatting for quantities depending on the asset class
+  const formatQuantity = (quantity, assetClass) => {
+    const num = Number(quantity);
+    if (assetClass?.toLowerCase() === 'stock') {
+      return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+    if (assetClass?.toLowerCase() === 'forex') {
+      return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+    // Default crypto layout mapping (higher fractional precision required)
+    return num.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 8 });
+  };
+
   // Filter transactions based on selections
   const filteredData = transactions?.filter((row) => {
     const matchesSearch = 
@@ -123,6 +140,10 @@ const Transactions = () => {
     const matchesType = !selectedTypes ||
       (selectedTypes === "Incoming" && Number(row.amount) >= 0) ||
       (selectedTypes === "Outgoing" && Number(row.amount) < 0);
+
+    // 🟢 Filter by Stock / Forex / Crypto asset class variable
+    const matchesAssetClass = !selectedAssetClass || 
+      row.asset_class?.toLowerCase() === selectedAssetClass.toLowerCase();
 
     // Date filtering
     let matchesDate = true;
@@ -148,7 +169,7 @@ const Transactions = () => {
       }
     }
 
-    return matchesSearch && matchesAccount && matchesType && matchesDate;
+    return matchesSearch && matchesAccount && matchesType && matchesDate && matchesAssetClass;
   }) || [];
 
   // Calculate total value of filtered transactions
@@ -231,7 +252,19 @@ const Transactions = () => {
         </div>
 
         {/* Filter Dropdowns */}
-        <div className='flex gap-4 w-full sm:w-auto'>
+        <div className='flex flex-wrap gap-4 w-full sm:w-auto justify-end'>
+          {/* 🟢 NEW: Asset Class Selection Filter */}
+          <select
+            value={selectedAssetClass}
+            onChange={(e) => setSelectedAssetClass(e.target.value)}
+            className='bg-[#181818] text-sm text-[#ababab] p-2 rounded-md focus:outline-none border-none hover:bg-[#111] cursor-pointer'
+          >
+            <option value="">All Asset Classes</option>
+            <option value="crypto">Cryptoc</option>
+            <option value="stock">Stocks</option>
+            <option value="forex">Forex</option>
+          </select>
+
           <select
             value={selectedDates}
             onChange={(e) => setSelectedDates(e.target.value)}
@@ -267,7 +300,7 @@ const Transactions = () => {
       </div>
 
       {/* Clear Filters Button */}
-      {(searchQuery || selectedDates || selectedAccounts || selectedTypes) && (
+      {(searchQuery || selectedDates || selectedAccounts || selectedTypes || selectedAssetClass) && (
         <div className="flex justify-end mb-4">
           <button
             onClick={() => {
@@ -275,6 +308,7 @@ const Transactions = () => {
               setSelectedDates("");
               setSelectedAccounts("");
               setSelectedTypes("");
+              setSelectedAssetClass("");
             }}
             className="text-sm text-[#ababab] hover:text-white transition-colors"
           >
@@ -318,7 +352,7 @@ const Transactions = () => {
                     <div className='flex items-center gap-3'>
                       <div 
                         className='rounded-full h-3 w-3' 
-                        style={{ background: PLATFORM_COLORS[row.account] || PLATFORM_COLORS[row.account?.charAt(0).toUpperCase() + row.account?.slice(1)] || "#666" }} 
+                        style={{ background: PLATFORM_COLORS[row.account] || PLATFORM_COLORS[row.account?.toLowerCase()] || PLATFORM_COLORS[row.account?.charAt(0).toUpperCase() + row.account?.slice(1)] || "#666" }} 
                       />
                       <span className="capitalize">{row.account}</span>
                     </div>
@@ -326,16 +360,14 @@ const Transactions = () => {
                   <td className='py-2.5 px-4 text-right select-none'>
                     {formatDate(row.transaction_date)}
                   </td>
-                  <td className='py-2.5 px-4 text-right select-none font-mono'>
+                  <td className='py-2.5 px-4 text-right select-none font-mono uppercase'>
                     {row.entity}
                   </td>
                   <td className={`py-2.5 px-4 pr-5 text-right select-none font-mono ${
                     Number(row.quantity) > 0 ? 'text-green-500' : 'text-red-500'
                   }`}>
-                    {Number(row.quantity).toLocaleString(undefined, {
-                      minimumFractionDigits: 4,
-                      maximumFractionDigits: 8
-                    })}
+                    {/* 🟢 Modified: Dynamic fractional precision helper invocation */}
+                    {formatQuantity(row.quantity, row.asset_class)}
                   </td>
                   <td className={`py-2.5 px-4 pr-5 text-right select-none font-mono ${
                     Number(row.amount) >= 0 ? 'text-green-500' : 'text-red-500'
