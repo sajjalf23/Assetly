@@ -9,6 +9,7 @@ const ForgotPassword = () => {
   const [formData, setFormData] = useState({
     email: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -21,6 +22,11 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return; // Prevent multiple submissions
+
+    setLoading(true);
+
     try {
       const { data } = await API.post(`/api/auth/resetpassword`, formData);
 
@@ -33,6 +39,8 @@ const ForgotPassword = () => {
     } catch (error) {
       console.error("Forgot password error:", error);
       toast.error(error.response?.data?.message || "Something went wrong!");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,9 +72,17 @@ const ForgotPassword = () => {
 
           <button
             type="submit"
-            className="bg-[#00e238] text-[#0d0d0d] font-semibold py-2 rounded-lg hover:bg-[#00c92f] transition-transform duration-150 hover:-translate-y-0.5"
+            disabled={loading}
+            className="flex items-center justify-center bg-[#00e238] text-[#0d0d0d] font-semibold py-2 rounded-lg hover:bg-[#00c92f] transition-transform duration-150 hover:-translate-y-0.5 cursor-pointer"
           >
-            Send Reset Link
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                Sending...
+              </span>
+            ) : (
+              "Send Reset Link"
+            )}
           </button>
         </form>
 

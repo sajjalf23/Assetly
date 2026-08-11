@@ -15,7 +15,7 @@ const PLATFORM_COLORS = {
   "binance": "#F3BA2F",
   "kucoin": "#24AE8F",
   "coinbase": "#0052FF",
-  "ethereum": "#627EEA",
+  "Ethereum Wallet": "#627EEA",
   "oanda": "#00214A",
   "metatrader": "#0078D7"
 };
@@ -24,7 +24,9 @@ const Transactions = () => {
   const { 
     transactions, 
     transactionsLoading, 
-    refreshTransactions 
+    refreshTransactions,
+    fetchTransactions,
+    transactionPagination
   } = useContext(AppContext);
   
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,6 +36,7 @@ const Transactions = () => {
   const [selectedAssetClass, setSelectedAssetClass] = useState(""); // 🟢 New state for stock/forex filtering
   const [refreshing, setRefreshing] = useState(false);
   const [cacheInfo, setCacheInfo] = useState(null);
+
 
   // Check cache age on component mount and when transactions update
   useEffect(() => {
@@ -86,7 +89,7 @@ const Transactions = () => {
   const getUniqueAccounts = () => {
     if (!transactions || transactions.length === 0) return [];
     const accounts = [...new Set(transactions.map(tx => 
-      tx.account.charAt(0).toUpperCase() + tx.account.slice(1)
+      tx.platform.charAt(0).toUpperCase() + tx.platform.slice(1)
     ))];
     return accounts.sort(); // Sort alphabetically
   };
@@ -130,12 +133,12 @@ const Transactions = () => {
   // Filter transactions based on selections
   const filteredData = transactions?.filter((row) => {
     const matchesSearch = 
-      row.account?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      row.platform?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       row.entity?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesAccount = 
       !selectedAccounts || 
-      row.account?.charAt(0).toUpperCase() + row.account?.slice(1) === selectedAccounts;
+      row.platform?.charAt(0).toUpperCase() + row.platform?.slice(1) === selectedAccounts;
 
     const matchesType = !selectedTypes ||
       (selectedTypes === "Incoming" && Number(row.amount) >= 0) ||
@@ -185,6 +188,19 @@ const Transactions = () => {
     );
   }
 
+  const handlePageChange = async (newPage) => {
+  if (
+    newPage < 1 ||
+    newPage > transactionPagination.totalPages ||
+    transactionsLoading
+  ) {
+    return;
+  }
+
+  // Force request so pagination never uses cached page 1
+  await fetchTransactions(newPage, true);
+};
+
   return (
     <div className="mx-full max-w-6xl px-6">
       <div className="flex justify-between items-center pt-12 pb-6">
@@ -209,7 +225,7 @@ const Transactions = () => {
       {/* Summary Stats */}
       {transactions && transactions.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-[#181818] p-4 rounded-lg">
+          <div className="bg-[#181818] p-4 rounded-lg hover:bg-[#1f1f1f]">
             <p className="text-[#ababab] text-sm">Total Transactions</p>
             <p className="text-white text-2xl font-bold">{filteredData.length}</p>
             {filteredData.length !== transactions.length && (
@@ -218,22 +234,22 @@ const Transactions = () => {
               </p>
             )}
           </div>
-          <div className="bg-[#181818] p-4 rounded-lg">
+          <div className="bg-[#181818] p-4 rounded-lg hover:bg-[#1f1f1f]">
             <p className="text-[#ababab] text-sm">Filtered Value</p>
             <p className={`text-2xl font-bold ${filteredTotal >= 0 ? 'text-green-500' : 'text-red-500'}`}>
               {formatAmount(filteredTotal)}
             </p>
           </div>
-          <div className="bg-[#181818] p-4 rounded-lg">
+          <div className="bg-[#181818] p-4 rounded-lg hover:bg-[#1f1f1f]">
             <p className="text-[#ababab] text-sm">Unique Assets</p>
             <p className="text-white text-2xl font-bold">
               {new Set(filteredData.map(tx => tx.entity)).size}
             </p>
           </div>
-          <div className="bg-[#181818] p-4 rounded-lg">
+          <div className="bg-[#181818] p-4 rounded-lg hover:bg-[#1f1f1f]">
             <p className="text-[#ababab] text-sm">Platforms</p>
             <p className="text-white text-2xl font-bold">
-              {new Set(filteredData.map(tx => tx.account)).size}
+              {new Set(filteredData.map(tx => tx.platform)).size}
             </p>
           </div>
         </div>
@@ -352,9 +368,9 @@ const Transactions = () => {
                     <div className='flex items-center gap-3'>
                       <div 
                         className='rounded-full h-3 w-3' 
-                        style={{ background: PLATFORM_COLORS[row.account] || PLATFORM_COLORS[row.account?.toLowerCase()] || PLATFORM_COLORS[row.account?.charAt(0).toUpperCase() + row.account?.slice(1)] || "#666" }} 
+                        style={{ background: PLATFORM_COLORS[row.platform] || PLATFORM_COLORS[row.platform?.toLowerCase()] || PLATFORM_COLORS[row.platform?.charAt(0).toUpperCase() + row.platform?.slice(1)] || "#666" }} 
                       />
-                      <span className="capitalize">{row.account}</span>
+                      <span className="capitalize">{row.platform}</span>
                     </div>
                   </td>
                   <td className='py-2.5 px-4 text-right select-none'>
@@ -364,7 +380,7 @@ const Transactions = () => {
                     {row.entity}
                   </td>
                   <td className={`py-2.5 px-4 pr-5 text-right select-none font-mono ${
-                    Number(row.quantity) > 0 ? 'text-green-500' : 'text-red-500'
+                    (Number(row.quantity)).toFixed(2)
                   }`}>
                     {/* 🟢 Modified: Dynamic fractional precision helper invocation */}
                     {formatQuantity(row.quantity, row.asset_class)}
@@ -380,6 +396,52 @@ const Transactions = () => {
           </table>
         )}
       </div>
+      {transactionPagination.totalPages > 1 && (
+  <div className="flex items-center justify-between px-5 py-4 bg-[#181818] border-t border-[#2a2a2a]">
+
+    <button
+      onClick={() =>
+        handlePageChange(transactionPagination.page - 1)
+      }
+      disabled={
+        !transactionPagination.hasPreviousPage ||
+        transactionsLoading
+      }
+      className="px-4 py-2 rounded-md bg-[#222] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2a2a2a] cursor-pointer"
+    >
+      Previous
+    </button>
+
+    <div className="text-sm text-[#ababab]">
+      Page{" "}
+      <span className="text-white font-semibold">
+        {transactionPagination.page}
+      </span>{" "}
+      of{" "}
+      <span className="text-white font-semibold">
+        {transactionPagination.totalPages}
+      </span>
+
+      <span className="ml-3">
+        ({transactionPagination.total} transactions)
+      </span>
+    </div>
+
+    <button
+      onClick={() =>
+        handlePageChange(transactionPagination.page + 1)
+      }
+      disabled={
+        !transactionPagination.hasNextPage ||
+        transactionsLoading
+      }
+      className="px-4 py-2 rounded-md bg-[#2285c3] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#1a6b9c] cursor-pointer"
+    >
+      Next
+    </button>
+
+  </div>
+)}
     </div>
   );
 };

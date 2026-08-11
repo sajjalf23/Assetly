@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { LuArrowRightLeft, LuSearch } from "react-icons/lu";
 import countryList from '../data/countryCode';
+import { AppContext } from '../context/appContext';
 
 // Colors
 const COLORS = ["#2285c3", "#c35f22", "#c38d22", "#227c5d", "#8c22c3", "#c3225f"];
@@ -12,7 +13,7 @@ const CustomToolTip = ({ active, payload, total }) => {
         return (
             <div className='bg-[#3a3a3a] pl-1 pr-3 shadow-lg'>
                 <p>{payload[0].name}</p>
-                <p>{payload[0].value.toLocaleString('de-DE')} €</p>
+                <p>{payload[0].value.toLocaleString('de-DE')} Units</p>
                 <p>{((payload[0].value / total) * 100).toFixed(2)}%</p>
             </div>
         )
@@ -22,14 +23,20 @@ const CustomToolTip = ({ active, payload, total }) => {
 // Custom Line tooltip
 const CustomToolTipLine = ({ active, payload }) => {
     if (active && payload && payload.length) {
+        const point = payload[0].payload;
+
         return (
-            <div className='bg-[#3a3a3a] p-2 shadow-lg'>
-                <p>{payload[0].name}</p>
-                <p>Units: {payload[0].value.toLocaleString('de-DE')}</p>
+            <div className='bg-[#3a3a3a] p-2 rounded-md shadow-lg'>
+                <p className='text-gray-300'>{point.month}</p>
+                <p className='text-white font-semibold'>
+                    ${Number(point.value).toLocaleString()}
+                </p>
             </div>
-        )
+        );
     }
-}
+
+    return null;
+};
 
 export default function Forex() {
     const base_URL = "https://v6.exchangerate-api.com/v6/71d302ff631e71b4d6fdcac2/latest";
@@ -40,40 +47,104 @@ export default function Forex() {
     const [toValue, setToValue] = useState("");
     const [showResult, setShowResult] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [marketOverview, setMarketOverview] = useState({
+        gold: null,
+        silver: null,
+    });
+    const [exchangeRate, setExchangeRate] = useState(null);
+    const { BackendUrl } = useContext(AppContext);
 
     // Backend data
-    const [tradesData, setTradesData] = useState([]);
     const [chartData, setChartData] = useState([]);
     const [total, setTotal] = useState(0);
+    const [summary, setSummary] = useState(null);
+    const [snapshots, setSnapshots] = useState([]);
 
     // Fetch backend trades
     const fetchBackendData = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/forex/trades');
+            const res = await fetch(`${BackendUrl}/api/forex/trades`, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+                },
+            });
             const data = await res.json();
-            const tradesArray = data.trades || [];
-            setTradesData(tradesArray);
 
-            const mappedData = tradesArray.map(item => ({
-                pair: item.instrument,
-                name: item.instrument.replace("_USD", ""),
-                value: parseFloat(item.initialUnits || 0),
-                pnl: parseFloat(item.price || 0),
-                monthlyChange: 0
-            })).sort((a, b) => b.value - a.value);
+            if (!data.success) {
+                throw new Error(data.message);
+            }
+
+            const portfolio = Array.isArray(data.portfolio)
+                ? data.portfolio
+                : [];
+
+            setSummary(data.summary || null);
+
+            setSnapshots(data.forexSnapshots || []);
+            console.log("Snapshots:", data.forexSnapshots);
+
+            const mappedData = portfolio
+                .map(asset => ({
+                    pair: asset.asset.replace("_", "/"),
+                    name: asset.asset,
+                    value: Math.abs(asset.amount),
+                    units: Math.abs(asset.amount),
+                    position: asset.amount > 0 ? "Long" : "Short",
+                    source: asset.sources?.join(", ") || "-",
+                }))
+                .sort((a, b) => b.value - a.value);
 
             setChartData(mappedData);
 
-            const totalTrades = mappedData.reduce((sum, item) => sum + item.value, 0);
-            setTotal(totalTrades);
+            const totalExposure = mappedData.reduce(
+                (sum, item) => sum + item.value,
+                0
+            );
+
+            setTotal(totalExposure);
 
         } catch (err) {
             console.error("Error fetching backend data:", err);
         }
     }
 
+    const fetchMarketOverview = async () => {
+        try {
+            const res = await fetch(
+                "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=pax-gold,tether-gold,kinesis-silver"
+            );
+
+            if (!res.ok) throw new Error("Failed to fetch market data");
+
+            const data = await res.json();
+
+            const gold =
+                data.find(c => c.id === "pax-gold") ||
+                data.find(c => c.id === "tether-gold");
+
+            const silver =
+                data.find(c => c.id === "kinesis-silver");
+
+            setMarketOverview({
+                gold: gold?.current_price ?? null,
+                silver: silver?.current_price ?? null
+            });
+
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+
     useEffect(() => {
         fetchBackendData();
+        fetchMarketOverview();
+
+        const interval = setInterval(() => {
+            fetchMarketOverview();
+        }, 60000);
+
+        return () => clearInterval(interval);
     }, []);
 
     const handleChange = (e) => {
@@ -107,6 +178,8 @@ export default function Forex() {
             const response = await fetch(URL);
             const data = await response.json();
             const rate = parseFloat(data.conversion_rates[to]);
+            setExchangeRate(rate);
+
             const amt = amount * rate;
             setToValue(amt.toFixed(2));
             setShowResult(true);
@@ -119,30 +192,44 @@ export default function Forex() {
 
     return (
         <div className='flex flex-col'>
-            <div className='min-h-screen bg-[#0d0d0d] text-white flex flex-row p-6 gap-8 pt-10'>
-                <div className='flex flex-col w-1/2 gap-6'>
+            <div className='min-h-[700px] bg-[#0d0d0d] text-white flex flex-row p-6 gap-8 pt-10'>
+                <div className='flex flex-col w-1/2 gap-6 h-[600px]'>
                     {/* Market Overview */}
-                    <div className='bg-[#181818] p-6 rounded-2xl shadow-lg'>
+                    <div className='h-[150px] bg-[#181818] p-6 rounded-2xl shadow-lg hover:bg-[#1f1f1f]'>
                         <h1 className='text-lg font-bold'>Market Overview</h1>
                         <div className='grid grid-cols-2 gap-5 text-gray-300 pt-6'>
                             <div>
                                 <p className='text-sm text-[#ababab]'>Gold Rate</p>
-                                <p className='text-lg font-semibold text-yellow-400'>$2,375</p>
+                                <p className='text-lg font-semibold text-amber-300'>
+                                    {marketOverview.gold
+                                        ? `$${marketOverview.gold.toLocaleString(undefined, {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}`
+                                        : "--"}
+                                </p>
                             </div>
                             <div>
                                 <p className='text-sm text-gray-400'>Silver Rate</p>
-                                <p className='text-lg font-semibold text-gray-300'>$28.50</p>
+                                <p className='text-lg font-semibold text-slate-300'>
+                                    {marketOverview.silver
+                                        ? `$${marketOverview.silver.toLocaleString(undefined, {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}`
+                                        : "--"}
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     {/* Line chart */}
-                    <div className='bg-[#181818] p-6 rounded-2xl shadow-lg'>
+                    <div className='h-[376px] bg-[#181818] p-6 rounded-2xl shadow-lg'>
                         <h2 className='text-xl font-semibold mb-4 text-white'>Forex Asset Trend</h2>
-                        <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={displayData}>
-                                <XAxis dataKey="name" stroke="#aaa" interval={0} tick={{ fontSize: 12 }} padding={{ left: 20, right: 20 }} />
-                                <YAxis stroke="#aaa" tick={{ fontSize: 12 }} />
+                        <ResponsiveContainer width="100%" height={295}>
+                            <LineChart data={snapshots} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                <XAxis dataKey="month" stroke="#aaa" interval={0} tick={{ fontSize: 12 }} padding={{ left: 20, right: 20 }} />
+                                <YAxis stroke="#aaa" tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                                 <Tooltip content={<CustomToolTipLine />} />
                                 <Line type="monotone" dataKey="value" stroke="#2285c3" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: "#fff" }} />
                             </LineChart>
@@ -150,9 +237,9 @@ export default function Forex() {
                     </div>
                 </div>
 
-                <div className='flex flex-col gap-6 w-1/2'>
+                <div className='flex flex-col gap-6 w-1/2 h-[550px]'>
                     {/* currency converter */}
-                    <div className='bg-[#181818] w-full p-6 rounded-2xl shadow-lg flex flex-col gap-3'>
+                    <div className='h-[160px] bg-[#181818] w-full p-6 rounded-2xl shadow-lg flex flex-col gap-3 hover:bg-[#1f1f1f]'>
                         <h1 className='text-lg font-semibold text-white'>Currency Converter</h1>
                         <div className='flex flex-col sm:flex-row gap-3 justify-center items-center'>
                             <input name='input' type='number' placeholder='Amount' className='p-2 border-2 border-[#3a3a3a] rounded-md text-white w-full sm:w-1/3' onChange={handleChange} />
@@ -165,15 +252,25 @@ export default function Forex() {
                             </select>
                             <button className='bg-[#2285c3] px-4 py-2 rounded-md text-white font-semibold hover:bg-[#1a6b9c] cursor-pointer' onClick={fetchData}>Convert</button>
                         </div>
-                        {showResult && <div className='text-center'>{fromValue} {fromCurr} = {toValue} {toCurr}</div>}
+                        {exchangeRate && (<div className='text-center text-sm text-gray-300'> 1 {fromCurr} = {exchangeRate.toLocaleString(undefined, {
+                            maximumFractionDigits: 4
+                        })} {toCurr}
+                        </div>
+                        )}
+
+                        {showResult && (
+                            <div className='text-center font-semibold'>
+                                {fromValue} {fromCurr} = {toValue} {toCurr}
+                            </div>
+                        )}
                     </div>
 
                     {/* Pie chart */}
-                    <div className='flex flex-col gap-6 items-center justify-center bg-[#181818] p-6 rounded-2xl shadow-lg'>
+                    <div className='h-[420px] bg-[#181818] p-6 rounded-2xl shadow-lg flex items-center justify-center'>
                         <div className='relative w-full max-w-md'>
-                            <ResponsiveContainer width="100%" height={280}>
-                                <PieChart margin={{ top: 20, bottom: 20 }}>
-                                    <Pie data={displayData} cx="50%" cy="50%" innerRadius={95} outerRadius={140} paddingAngle={0} dataKey="value" label={(entry) => entry.name} labelLine={false} stroke='none'>
+                            <ResponsiveContainer width="100%" height={320}>
+                                <PieChart margin={{ top: 10, right: 80, bottom: 10, left: 80 }}>
+                                    <Pie data={displayData} cx="50%" cy="50%" innerRadius={95} outerRadius={135} paddingAngle={0} dataKey="value" label={(entry) => entry.name} labelLine={false} stroke='none'>
                                         {displayData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index] || "#6B7280"} />
                                         ))}
@@ -204,9 +301,9 @@ export default function Forex() {
                         <thead className='text-sm font-medium text-[#ababab] bg-[#1f1f1f]'>
                             <tr>
                                 <th className='pl-10 py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none'>Pair</th>
-                                <th className='py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>Trades Count</th>
-                                <th className='py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>Price</th>
-                                <th className='pr-5 py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>% of trades</th>
+                                <th className='py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>Units</th>
+                                <th className='py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>Position</th>
+                                <th className='pr-5 py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none'>% of Exposure</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -218,9 +315,12 @@ export default function Forex() {
                                             <span>{row.pair}</span>
                                         </div>
                                     </td>
-                                    <td className='py-3 px-4 text-right select-none'>{row.value}</td>
-                                    <td className='py-3 px-4 text-right select-none'>{row.pnl}</td>
-                                    <td className='py-3 px-4 pr-5 text-right select-none'>{((row.value / total) * 100).toFixed(2)}%</td>
+                                    <td className='py-3 px-4 text-right select-none'>{row.units.toLocaleString()}</td>
+                                    <td className='py-3 px-4 text-right select-none'>{row.position}</td>
+                                    <td className='py-3 px-4 pr-5 text-right select-none'>{total > 0
+                                        ? ((row.value / total) * 100).toFixed(2)
+                                        : "0.00"
+                                    }%</td>
                                 </tr>
                             ))}
                         </tbody>

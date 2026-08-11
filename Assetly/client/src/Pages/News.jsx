@@ -63,7 +63,7 @@ export default function News() {
   };
 
   return (
-    <div className="flex flex-col w-full bg-[#0d0d0d] pt-20 px-4 md:px-8 gap-6 pb-10">
+    <div className="flex flex-col w-full bg-[#0d0d0d] pt-10 px-4 md:px-8 gap-6 pb-10">
 
       {/* Featured News Banner */}
       {!searchQuery && featuredNews.length > 0 && (
@@ -133,7 +133,7 @@ export default function News() {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-full font-medium text-sm ${
+              className={`px-4 py-2 rounded-full font-medium text-sm cursor-pointer ${
                 selectedCategory === cat
                   ? "bg-green-400 text-black"
                   : "bg-[#181818] text-white hover:bg-[#2a2a2a]"

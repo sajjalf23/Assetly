@@ -1,18 +1,30 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { AppContext } from "../Context/appContext";
 import API from "../Api/axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import GoogleIcon from "../assets/googleicon.png"; 
+import { FiEye, FiEyeOff } from "react-icons/fi";
+import GoogleIcon from "../assets/googleicon.png";
 
 const Login = () => {
-  const { setUserData, setIsLoggedIn ,getUserData} = useContext(AppContext);
+  const { setUserData, setIsLoggedIn, getUserData } = useContext(AppContext);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
+  useEffect(() => {
+    if (!showPassword) return;
+
+    const timer = setTimeout(() => {
+      setShowPassword(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [showPassword]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -23,24 +35,49 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Prevent multiple requests
+    if (isLoading) return;
+
+    setIsLoading(true);
+
     try {
-      const { data } = await API.post(`/api/auth/signin`, formData);
+      const { data } = await API.post(
+        `/api/auth/signin`,
+        formData
+      );
 
       if (data.success) {
         toast.success("Login successful!");
+
         console.log("Login response data:", data);
+
         getUserData(data.session?.access_token);
         setIsLoggedIn(true);
+
         if (data.session?.access_token) {
-          localStorage.setItem("access_token", data.session.access_token);
+          localStorage.setItem(
+            "access_token",
+            data.session.access_token
+          );
         }
-        navigate("/home"); 
+
+        navigate("/home");
+
       } else {
         toast.error(data.message || "Login failed!");
       }
+
     } catch (error) {
       console.error("Login error:", error);
-      toast.error(error.response?.data?.message || "Something went wrong!");
+
+      toast.error(
+        error.response?.data?.message ||
+        "Something went wrong!"
+      );
+
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -85,19 +122,40 @@ const Login = () => {
           </div>
 
           <div>
-            <label htmlFor="password" className="text-sm text-gray-700 block mb-1">
+            <label
+              htmlFor="password"
+              className="text-sm text-gray-700 block mb-1"
+            >
               Password
             </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              required
-              className="w-full p-2 bg-[#f9f9f9] border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#00e238]"
-            />
+
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                required
+                className="w-full p-2 pr-10 bg-[#f9f9f9] border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#00e238]"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-800 cursor-pointer"
+                aria-label={
+                  showPassword ? "Hide password" : "Show password"
+                }
+              >
+                {showPassword ? (
+                  <FiEyeOff size={15} />
+                ) : (
+                  <FiEye size={15} />
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="text-right text-sm text-gray-500 mb-2">
@@ -108,9 +166,17 @@ const Login = () => {
 
           <button
             type="submit"
-            className="bg-[#00e238] text-[#0d0d0d] font-semibold py-2 rounded-lg hover:bg-[#00c92f] transition-transform duration-150 hover:-translate-y-0.5"
+            disabled={isLoading}
+            className="bg-[#00e238] text-[#0d0d0d] font-semibold py-2 rounded-lg hover:bg-[#00c92f] transition-transform duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
           >
-            Sign In
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-[#0d0d0d]/30 border-t-[#0d0d0d] rounded-full animate-spin"></div>
+                Signing in...
+              </>
+            ) : (
+              "Sign In"
+            )}
           </button>
         </form>
 

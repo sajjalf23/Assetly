@@ -314,7 +314,7 @@ export default function Accounts() {
     }
 
     return (
-        <div className="flex bg-[#0d0d0d] pt-20 overflow-x-hidden w-full max-w-[100vw] min-h-screen">
+        <div className="flex bg-[#0d0d0d] pt-20 pl-5 pr-5 overflow-x-hidden w-full max-w-[100vw] min-h-screen">
             <div className="flex flex-col w-full m-4 gap-4">
                 {/* Header */}
                 <motion.div

@@ -6,12 +6,20 @@ import { FaExchangeAlt } from "react-icons/fa";
 import { HiShoppingBag } from "react-icons/hi2";
 import { useState, useContext } from 'react';
 import { RxHamburgerMenu } from "react-icons/rx";
+import { LuLogOut } from "react-icons/lu";
 import { AppContext } from '../context/AppContext';
+
 
 export default function Navbar() {
     const [openSidebar, setOpenSidebar] = useState(false);
-    const { userData } = useContext(AppContext);
+    const { userData, logoutUser } = useContext(AppContext);
+    console.log(userData);
     const location = useLocation(); 
+
+    const handleLogout = async () => {
+    await logoutUser();
+    setOpenSidebar(false);
+};
     
     console.log("Current path:", location.pathname); 
     
@@ -36,11 +44,22 @@ export default function Navbar() {
                 md:translate-x-0`
             }>
 
-                <div className="flex items-center gap-2 mb-6">
-                    <div className="flex items-center justify-center bg-[#3a3a3a] rounded-[50%] p-1.5 w-9 h-9">
-                        {userData?.username?.[0]?.toUpperCase() || "G"}
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center bg-[#3a3a3a] rounded-full w-9 h-9 text-sm font-semibold">
+                            {userData?.username?.[0]?.toUpperCase() || "G"}
+                        </div>
+                        <span className="truncate max-w-[120px]">{userData?.username || "Guest"}</span>
                     </div>
-                    <div>{userData?.username || "Guest"}</div>
+
+                    {/* 3. Clickable Logout Button aligned to the far right */}
+                    <button 
+                        onClick={handleLogout}
+                        className="p-2 rounded-lg hover:bg-[#2a2a2a] text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+                        title="Logout"
+                    >
+                        <LuLogOut size={18} />
+                    </button>
                 </div>
 
                 <hr className='text-[#3a3a3a]'></hr>

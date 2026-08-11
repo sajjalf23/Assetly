@@ -71,3 +71,10 @@ button:focus-visible {
 .recharts-sector:focus {
   outline: none;
 }
+
+@layer base {
+  body {
+    @apply select-none;
+    background:#0d0d0d;
+  }
+}

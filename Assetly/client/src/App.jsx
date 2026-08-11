@@ -13,13 +13,14 @@ import Navbar from './components/Navbar';
 import LandingPage from './Pages/LandingPage';
 import Home from './Pages/Home';
 import Forex from './Pages/Forex';
-import Stocks from './Pages/Stocks'; 
+import Stocks from './Pages/Stocks';
 import Crypto from './Pages/Crypto';
 import News from './Pages/News';
 import Overview from './Pages/Overview';
 import Accounts from './Pages/Accounts';
 import Transactions from './Pages/Transactions';
 import Settings from './Pages/Settings';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const AppContent = () => {
   const { userData, isLoggedIn } = useContext(AppContext);
@@ -40,7 +41,7 @@ const AppContent = () => {
     <div className="min-h-screen bg-[#0d0d0d]">
       {/* Show Navbar only on authenticated/Pages */}
       {!hideNavbar && <Navbar />}
-      
+
       {/* Main content area with conditional padding */}
       <div className={hideNavbar ? "" : "md:pl-[250px] transition-all duration-300"}>
         <Routes>
@@ -51,19 +52,32 @@ const AppContent = () => {
           <Route path="/auth/forgot-password" element={<ForgotPassword />} />
           <Route path="/auth/callback" element={<GoogleRedirect />} />
           <Route path="/auth/change-password" element={<ChangePassword />} />
-          
+
           {/* Protected/Dashboard Routes (with navbar) */}
-          <Route path="/home" element={<Home />} />
-          <Route path="/stocks" element={<Stocks />} />
-          <Route path="/crypto" element={<Crypto />} />
-          <Route path="/forex" element={<Forex />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/overview" element={<Overview />} />
-          <Route path="/accounts" element={<Accounts />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/earnings" element={<Earnings />} />
-          <Route path="/settings" element={<Settings />} />
-          
+          <Route element={<ProtectedRoute />}>
+
+            <Route path="/home" element={<Home />} />
+
+            <Route path="/news" element={<News />} />
+
+            <Route path="/crypto" element={<Crypto />} />
+
+            <Route path="/stocks" element={<Stocks />} />
+
+            <Route path="/forex" element={<Forex />} />
+
+            <Route path="/overview" element={<Overview />} />
+
+            <Route path="/accounts" element={<Accounts />} />
+
+            <Route path="/transactions" element={<Transactions />} />
+
+            <Route path="/settings" element={<Settings />} />
+
+            <Route path="/earnings" element={<Earnings />} />
+
+          </Route>
+
           {/* Redirect any unknown route to home */}
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
@@ -75,7 +89,7 @@ const AppContent = () => {
 const App = () => {
   return (
     <>
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}

@@ -2,45 +2,45 @@ import supabase from '../config/supabaseClient.js'
 
 
 export const register = async (req, res) => {
-    const { email, password, username } = req.body;
-    if (!email || !password || !username) {
-        return res.status(400).json({ success: false, message: "Enter all Required Fields" });
-    }
-    const { data, error } = await supabase.auth.admin.listUsers({
-        filter: `email=eq.${email}`
-    });
-
-    if (error) {
-        throw error; 
-    }
-
-    if (data?.users?.length > 0) {
-        return res.status(400).json({
-            success: false,
-            message: "Email already registered"
-        });
-    }
-
     try {
+        const { email, password, username } = req.body;
+
+        if (!email || !password || !username) {
+            return res.status(400).json({
+                success: false,
+                message: "Enter all required fields"
+            });
+        }
+
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                data: { username }
+                data: {
+                    username
+                }
             }
-        })
-        if (error) throw error
+        });
 
-        res.status(201).json({
+        console.log("SignUp data:", data);
+console.log("SignUp error:", error);
+
+        if (error) throw error;
+
+        return res.status(201).json({
             success: true,
             user: data.user,
-            message: 'Signup successful! Check your email for verification.',
-        })
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message })
-    }
+            session: data.session,
+            message: "Signup successful! Check your email."
+        });
 
-}
+    } catch (err) {
+        return res.status(400).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
 
 
 export const signin = async (req, res) => {
@@ -143,21 +143,74 @@ export const resetpassword = async( req, res)=>{
 }
 
 
-export const getUser = (req, res) => {
+export const getUser = async (req, res) => {
   try {
-    if (!req.user)
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
+    let username = req.user.user_metadata?.username;
+
+    if (!username && req.user.email) {
+
+      const fullName = req.user.user_metadata?.full_name || "";
+
+      const firstName =
+        fullName.split(" ")[0].toLowerCase();
+
+      username = firstName;
+
+      // Get all users
+      const { data, error } =
+        await supabase.auth.admin.listUsers();
+
+      if (error) throw error;
+
+      // Check if username already exists
+      const usernameExists = data.users.some(
+        (user) =>
+          user.user_metadata?.username === username
+      );
+
+      // If exists add random numbers
+      if (usernameExists) {
+        username =
+          firstName +
+          Math.floor(1000 + Math.random() * 9000);
+      }
+
+      // Save username permanently
+      await supabase.auth.admin.updateUserById(
+        req.user.id,
+        {
+          user_metadata: {
+            ...req.user.user_metadata,
+            username,
+          },
+        }
+      );
+    }
 
     const flatUser = {
-      id: req.user.sub || req.user.id,
+      id: req.user.id,
       email: req.user.email,
-      username: req.user.user_metadata?.username || null,
+      username,
     };
 
-    res.status(200).json({ success: true, user: flatUser });
+    res.status(200).json({
+      success: true,
+      user: flatUser,
+    });
+
   } catch (err) {
-    console.error("Error fetching user:", err);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 };
-

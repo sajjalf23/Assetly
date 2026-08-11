@@ -1,24 +1,13 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, Tooltip
 } from 'recharts';
-import { LuSearch } from "react-icons/lu";
+import { LuSearch, LuTrendingUp, LuTrendingDown } from "react-icons/lu";
 import { AppContext } from '../context/appContext';
+import { getAssetColor } from '../utils/assetColors';
+import { formatChange } from '../utils/formatChange';
 
-// Colors to match Forex page
-const COLORS = ["#2285c3", "#c35f22", "#c38d22", "#227c5d", "#8c22c3", "#c3225f"];
-
-// Common crypto symbols to CoinGecko ID mapping
-const COIN_MAPPING = {
-  'BTC': 'bitcoin', 'ETH': 'ethereum', 'USDT': 'tether', 'USDC': 'usd-coin',
-  'BNB': 'binancecoin', 'XRP': 'ripple', 'SOL': 'solana', 'ADA': 'cardano',
-  'DOGE': 'dogecoin', 'DOT': 'polkadot', 'MATIC': 'matic-network', 'SHIB': 'shiba-inu',
-  'AVAX': 'avalanche-2', 'LINK': 'chainlink', 'LEO': 'leo-token', 'XAUT': 'tether-gold',
-  'EURC': 'euro-coin', 'PORT': 'port-finance',
-};
-
-const getCoinId = (symbol) => COIN_MAPPING[symbol.toUpperCase()] || symbol.toLowerCase();
 
 // Pie Chart Tooltip
 const CustomToolTip = ({ active, payload, total }) => {
@@ -40,171 +29,204 @@ const CustomToolTip = ({ active, payload, total }) => {
 };
 
 // Line Chart Tooltip
+// const CustomToolTipLine = ({ active, payload }) => {
+//   if (active && payload?.length) {
+//     const crypto = payload[0].payload;
+//     return (
+//       <div className='bg-[#3a3a3a] p-2 rounded-lg shadow-lg'>
+//         <p className='font-semibold text-white mb-1'>{crypto.name}</p>
+//         <p className='text-white font-medium'>Value: ${crypto.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+//         {crypto.change24h != null && (
+//           <p className={`text-sm ${crypto.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+//             24h: {crypto.change24h >= 0 ? '+' : ''}{crypto.change24h.toFixed(2)}%
+//           </p>
+//         )}
+//       </div>
+//     );
+//   }
+//   return null;
+// };
 const CustomToolTipLine = ({ active, payload }) => {
   if (active && payload?.length) {
-    const crypto = payload[0].payload;
+    const data = payload[0].payload;
+
     return (
-      <div className='bg-[#3a3a3a] p-2 rounded-lg shadow-lg'>
-        <p className='font-semibold text-white mb-1'>{crypto.name}</p>
-        <p className='text-white font-medium'>Price: ${crypto.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-        {crypto.change24h != null && (
-          <p className={`text-sm ${crypto.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            24h: {crypto.change24h >= 0 ? '+' : ''}{crypto.change24h.toFixed(2)}%
-          </p>
-        )}
+      <div className="bg-[#3a3a3a] p-2 rounded-lg shadow-lg">
+        <p className="font-semibold text-white">
+          {data.month}
+        </p>
+
+        <p className="text-white">
+          ${Number(data.value).toLocaleString()}
+        </p>
       </div>
     );
   }
+
   return null;
 };
 
-// Fetch top market data independently of user portfolio
-const fetchMarketData = async (setChartData, setLineData) => {
-  try {
-    const marketRes = await fetch(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=8&page=1&sparkline=false'
-    );
-    if (marketRes.ok) {
-      const marketData = await marketRes.json();
-      // Sort by price to find the highest one
-      const sortedByPrice = [...marketData].sort((a, b) => b.current_price - a.current_price);
-      
-      setChartData(marketData.slice(0, 4).map(c => ({
-        symbol: c.symbol.toUpperCase(),
-        name: c.name,
-        price: c.current_price,
-        change24h: c.price_change_percentage_24h,
-        isHighestPrice: c.current_price === sortedByPrice[0]?.current_price
-      })));
-      setLineData(marketData.slice(0, 8).map(c => ({
-        symbol: c.symbol.toUpperCase(),
-        name: c.name,
-        price: c.current_price,
-        change24h: c.price_change_percentage_24h
-      })));
-      return true;
-    }
-  } catch (error) {
-    console.error('Error fetching market data:', error);
-  }
-  return false;
-};
 
-// Fetch crypto prices from CoinGecko
-const fetchCryptoPrices = async (symbols) => {
-  try {
-    const coinIds = [...new Set(symbols.map(getCoinId))];
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd&include_24h_change=true`
-    );
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (error) {
-    console.error("Error fetching prices:", error);
-    return null;
-  }
-};
 
 export default function CryptoDashboard() {
-  const { isLoggedIn, userData, refreshAccounts, BackendUrl } = useContext(AppContext);
+  const { isLoggedIn, userData, BackendUrl } = useContext(AppContext);
 
   const [chartData, setChartData] = useState([]);
   const [portfolioData, setPortfolioData] = useState([]);
-  const [lineData, setLineData] = useState([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMarketDataLoading, setIsMarketDataLoading] = useState(true);
   const [isPortfolioLoading, setIsPortfolioLoading] = useState(false);
+  const [snapshotData, setSnapshotData] = useState([]);
 
-  // Fetch market data independently - always runs regardless of login status
-  const fetchMarketOverview = async () => {
-    setIsMarketDataLoading(true);
-    const success = await fetchMarketData(setChartData, setLineData);
-    if (!success) {
-      // Fallback to some default data if API fails
-      setChartData([]);
-      setLineData([]);
-    }
-    setIsMarketDataLoading(false);
-  };
+
+
+  // // Fetch market data independently - always runs regardless of login status
+  // const fetchMarketOverview = async () => {
+  //   setIsMarketDataLoading(true);
+  //   const success = await fetchMarketData(setChartData);
+  //   if (!success) {
+  //     // Fallback to some default data if API fails
+  //     setChartData([]);
+  //   }
+  //   setIsMarketDataLoading(false);
+  // };
 
   // Fetch portfolio data from backend (only when logged in)
   const fetchCryptoData = async () => {
+    setIsPortfolioLoading(true);
     if (!isLoggedIn || !userData) {
       setPortfolioData([]);
       setTotal(0);
+      setSnapshotData([]);
+
+      setIsMarketDataLoading(false);
       setIsPortfolioLoading(false);
       return;
     }
-    
-    setIsPortfolioLoading(true);
-    try {
-      // Ensure latest accounts
-      await refreshAccounts();
 
-      const res = await fetch(`${BackendUrl}/api/crypto/trades`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` }
+    setIsMarketDataLoading(true);
+    setIsPortfolioLoading(true);
+
+    try {
+      // Fetch portfolio from backend
+      const portfolioRes = await fetch(`${BackendUrl}/api/crypto/trades`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
       });
 
-      if (!res.ok) throw new Error(`Failed to fetch portfolio: ${res.status}`);
-      const json = await res.json();
+      if (!portfolioRes.ok) {
+        throw new Error(`Failed to fetch portfolio (${portfolioRes.status})`);
+      }
 
-      const portfolioItems = (json.portfolio || []).filter(item => item.amount > 0).slice(0, 20);
-      
+      const portfolioJson = await portfolioRes.json();
+
+      const portfolioItems = (portfolioJson.portfolio || [])
+        .filter((item) => item.amount > 0)
+        .slice(0, 20);
+
+      setSnapshotData(portfolioJson.cryptoSnapshots || []);
+      console.log(portfolioJson.cryptoSnapshots);
+
       if (portfolioItems.length === 0) {
         setPortfolioData([]);
         setTotal(0);
         return;
       }
-      
-      const symbols = portfolioItems.map(item => item.asset);
-      const pricesData = await fetchCryptoPrices(symbols);
 
-      const processedPortfolio = portfolioItems.map(item => {
-        const coinId = getCoinId(item.asset);
-        const priceData = pricesData?.[coinId];
-        const price = priceData?.usd || 1;
-        const change24h = priceData?.usd_24h_change || 0;
-        const value = price * Math.abs(item.amount);
-        return { 
-          symbol: item.asset.toUpperCase(), 
-          name: item.asset, 
-          amount: item.amount, 
-          price, 
-          change24h, 
-          value, 
-          tradeCount: item.tradeCount 
-        };
-      }).sort((a, b) => b.value - a.value);
+      // Fetch prices from YOUR backend (not CoinGecko directly)
+      const symbols = portfolioItems.map((item) => item.asset);
+
+      const priceRes = await fetch(`${BackendUrl}/api/crypto/coingecko`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({ symbols }),
+      });
+
+      const priceJson = await priceRes.json();
+
+      setChartData(
+        (priceJson.market || []).map((coin) => ({
+          name: coin.name,
+          price: coin.current_price,
+          change24h: coin.price_change_percentage_24h,
+        }))
+      );
+
+      if (!priceRes.ok || !priceJson.success) {
+        throw new Error(priceJson.message || "Failed to fetch prices");
+      }
+
+      const pricesData = priceJson.prices || {};
+
+      // Merge portfolio with prices
+      const processedPortfolio = portfolioItems
+        .map((item) => {
+          const symbol = item.asset.toUpperCase();
+
+          const priceData = pricesData[symbol] || {};
+
+          const price = priceData.usd || 0;
+          const change24h = priceData.usd_24h_change || 0;
+          const value = price * Math.abs(item.amount);
+
+          return {
+            symbol,
+            name: item.asset,
+            amount: item.amount,
+            price,
+            change24h,
+            value,
+            tradeCount: item.tradeCount,
+          };
+        })
+        .sort((a, b) => b.value - a.value);
 
       setPortfolioData(processedPortfolio);
-      setTotal(processedPortfolio.reduce((sum, item) => sum + item.value, 0));
-
+      setTotal(
+        processedPortfolio.reduce((sum, item) => sum + item.value, 0)
+      );
     } catch (err) {
       console.error("Error fetching portfolio:", err);
+
       setPortfolioData([]);
       setTotal(0);
+      setSnapshotData([]);
+
+      // Optional
+      // toast.error(err.message);
     } finally {
       setIsPortfolioLoading(false);
+      setIsMarketDataLoading(false);
     }
   };
 
   // Fetch market data on initial load and periodically
-  useEffect(() => {
-    fetchMarketOverview();
-    const marketInterval = setInterval(fetchMarketOverview, 60000);
-    
-    return () => clearInterval(marketInterval);
-  }, []);
+  // useEffect(() => {
+  //   fetchMarketOverview();
+  //   const marketInterval = setInterval(fetchMarketOverview, 60000);
+
+  //   return () => clearInterval(marketInterval);
+  // }, []);
+
 
   // Fetch portfolio data when user logs in/out or changes
   useEffect(() => {
+
+    if (!isLoggedIn) return;
+
     fetchCryptoData();
-    const portfolioInterval = setInterval(fetchCryptoData, 60000);
-    
-    return () => clearInterval(portfolioInterval);
-  }, [isLoggedIn, userData]);
+
+    const id = setInterval(fetchCryptoData, 60000);
+
+    return () => clearInterval(id);
+
+  }, [isLoggedIn]);
 
   // Combined loading state for initial page load
   useEffect(() => {
@@ -214,11 +236,19 @@ export default function CryptoDashboard() {
   }, [isMarketDataLoading, isPortfolioLoading]);
 
   const query = searchQuery.toLowerCase();
-  const filteredData = portfolioData.filter(c => 
-    c.symbol.toLowerCase().includes(query) || 
-    c.name.toLowerCase().includes(query)
-  );
-  const displayData = searchQuery ? filteredData : portfolioData;
+  const displayData = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+
+    return searchQuery
+      ? portfolioData.filter(
+        c =>
+          c.symbol.toLowerCase().includes(query) ||
+          c.name.toLowerCase().includes(query)
+      )
+      : portfolioData;
+  }, [portfolioData, searchQuery]);
+
+  console.log(snapshotData);
 
   return (
     <div className='flex flex-col'>
@@ -237,17 +267,30 @@ export default function CryptoDashboard() {
               {chartData.map((c, i) => (
                 <div key={i}>
                   <p className='text-sm text-[#ababab]'>{c.name}</p>
-                  <p className={`text-lg font-semibold ${
-                   'text-white'
-                  }`}>
-                    ${c.price < 1 ? c.price.toFixed(6) : c.price.toLocaleString(undefined, { 
+                  <p className={`text-lg font-semibold ${'text-white'
+                    }`}>
+                    ${c.price < 1 ? c.price.toFixed(6) : c.price.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: c.price < 1 ? 6 : 2
                     })}
                   </p>
-                  <p className={`font-medium ${c.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {c.change24h >= 0 ? '+' : ''}{c.change24h.toFixed(2)}%
-                  </p>
+                  <div
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium
+    ${c.change24h > 0
+                        ? 'bg-green-900/30 text-green-400'
+                        : c.change24h < 0
+                          ? 'bg-red-900/30 text-red-400'
+                          : 'bg-gray-900/30 text-gray-400'
+                      }`}
+                  >
+                    {c.change24h > 0 ? (
+                      <LuTrendingUp size={14} />
+                    ) : c.change24h < 0 ? (
+                      <LuTrendingDown size={14} />
+                    ) : null}
+
+                    {formatChange(c.change24h)}
+                  </div>
                 </div>
               ))}
             </div>
@@ -259,27 +302,27 @@ export default function CryptoDashboard() {
           {/* Crypto Trend - ALWAYS SHOWS market data */}
           <div className='bg-[#181818] p-6 rounded-2xl shadow-lg'>
             <h2 className='text-xl font-semibold mb-4 text-white'>Crypto Asset Trend</h2>
-            <div className='h-[280px]'>
+            <div className='w-full h-[280px]'>
               {isMarketDataLoading ? (
                 <div className='flex justify-center items-center h-full'>
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2285c3]"></div>
                 </div>
-              ) : lineData.length === 0 ? (
+              ) : snapshotData.length === 0 ? (
                 <div className='flex justify-center items-center h-full text-gray-400'>
                   No market data available
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={lineData}>
-                    <XAxis dataKey="symbol" stroke="#aaa" interval={0} tick={{ fontSize: 12 }} padding={{ left: 20, right: 20 }} />
-                    <YAxis stroke="#aaa" tick={{ fontSize: 12 }} />
+                  <LineChart data={snapshotData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <XAxis dataKey="month" stroke="#aaa" interval={0} tick={{ fontSize: 12 }} padding={{ left: 20, right: 20 }} />
+                    <YAxis stroke="#aaa" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
                     <Tooltip content={<CustomToolTipLine />} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="price" 
-                      stroke="#2285c3" 
-                      strokeWidth={3} 
-                      dot={{ r: 4, strokeWidth: 2, fill: "#fff" }} 
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#2285c3"
+                      strokeWidth={3}
+                      dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -311,22 +354,24 @@ export default function CryptoDashboard() {
                       data={displayData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={75}
+                      innerRadius={80}
                       outerRadius={120}
                       dataKey="value"
-                      label={(entry) => entry.symbol}
+                      label={({ percent, symbol }) =>
+                        percent > 0.05 ? symbol : ""
+                      }
                       labelLine={false}
                       stroke="none"
                     >
                       {displayData.map((entry, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        <Cell key={i} fill={getAssetColor(entry.symbol)} />
                       ))}
                     </Pie>
                     <Tooltip content={<CustomToolTip total={total} />} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
-              {displayData.length > 0 && (
+              {snapshotData.length > 0 && (
                 <div className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center'>
                   <div className='text-white text-2xl font-semibold'>
                     ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -379,16 +424,16 @@ export default function CryptoDashboard() {
                   </thead>
                   <tbody>
                     {displayData.map((row, index) => (
-                      <tr key={index} className='text-sm text-white border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#202020]'>
+                      <tr key={row.symbol} className='text-sm text-white border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#202020]'>
                         <td className='py-2.5 px-4 select-none flex items-center gap-3'>
-                          <div className='rounded-full h-3 w-3' style={{ background: COLORS[index % COLORS.length] }}></div>
+                          <div className='rounded-full h-3 w-3' style={{ background: getAssetColor(row.symbol) }}></div>
                           {row.symbol}
                         </td>
                         <td className='py-3 px-4 text-right select-none'>
                           {row.amount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                         </td>
                         <td className='py-3 px-4 text-right select-none'>
-                          ${row.price < 1 ? row.price.toFixed(6) : row.price.toLocaleString(undefined, { 
+                          ${row.price < 1 ? row.price.toFixed(6) : row.price.toLocaleString(undefined, {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: row.price < 1 ? 6 : 2
                           })}
@@ -399,7 +444,7 @@ export default function CryptoDashboard() {
                           </span>
                         </td>
                         <td className='py-3 px-4 text-right select-none'>
-                          ${row.value.toLocaleString(undefined, { 
+                          ${row.value.toLocaleString(undefined, {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2
                           })}

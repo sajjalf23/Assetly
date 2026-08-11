@@ -1,7 +1,7 @@
 import supabase from '../config/supabaseClient.js';
 
 
-exports.changePassword = async (req, res) => {
+export const changePassword = async (req, res) => {
     try {
         const user = req.user.id;
         const { currentPassword, newPassword, confirmPassword } = req.body;
