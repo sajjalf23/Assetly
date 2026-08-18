@@ -44,13 +44,13 @@ export const getEthereumTransactionsToday = async (
 
   try {
     const { start, end } = getTodayRange();
-    
+
     // Use V2 API to avoid deprecation
     const url = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=tokentx&address=${ethAddress}&sort=desc&apikey=${etherscanApiKey}`;
 
     const response = await fetch(url);
     const data = await response.json();
-    
+
     if (!Array.isArray(data.result)) {
       console.log('Etherscan returned non-array result:', data.message);
       return [];
@@ -105,9 +105,9 @@ export const getBinanceTransactionsToday = async ({ apiKey, apiSecret }) => {
       console.log('Binance API error:', response.status);
       return [];
     }
-    
+
     const data = await response.json();
-    
+
     if (!Array.isArray(data)) return [];
 
     return data.map((tx) => ({
@@ -173,9 +173,9 @@ export const getKuCoinTransactionsToday = async ({
       console.log('KuCoin API error:', response.status);
       return [];
     }
-    
+
     const data = await response.json();
-    
+
     if (!data.data || !Array.isArray(data.data.items)) return [];
 
     return data.data.items.map((tx) => ({
@@ -231,9 +231,9 @@ export const getCoinbaseTransactionsToday = async ({
       console.log('Coinbase API error:', response.status);
       return [];
     }
-    
+
     const data = await response.json();
-    
+
     if (!Array.isArray(data)) return [];
 
     return data
@@ -258,14 +258,14 @@ export const getCoinbaseTransactionsToday = async ({
 export const dailyTransactionSync = async (req, res) => {
   try {
     console.log("Running Daily Transaction Sync...");
-    
+
     // Fix: Use correct table name 'accounts' not 'user_credentials'
     const { data: users, error } = await supabase
       .from("accounts")
       .select("*");
 
     if (error) throw error;
-    
+
     if (!users || users.length === 0) {
       console.log("No users found");
       return res.status(200).json({
@@ -355,9 +355,9 @@ export const dailyTransactionSync = async (req, res) => {
 
   } catch (err) {
     console.error("Daily Sync Error:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: err.message 
+      error: err.message
     });
   }
 };

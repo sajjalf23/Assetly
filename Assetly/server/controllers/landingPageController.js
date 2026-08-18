@@ -77,10 +77,10 @@ export const getLandingPageData = async (req, res) => {
         ]);
 
         const forexData = {
-    symbol: `${forex.split("_")[0]}/${forex.split("_")[1]}`,
-    price: forexRes.data.conversion_rate,
-    change: "+0.5"
-};
+            symbol: `${forex.split("_")[0]}/${forex.split("_")[1]}`,
+            price: forexRes.data.conversion_rate,
+            change: "+0.5"
+        };
 
         cache.data = {
 

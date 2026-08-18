@@ -6,19 +6,19 @@ import { getAllTransactionsFromAPIs, saveTransactionsToDB } from './fetchAndSave
 // ======================================================
 const deletePlatformTransactions = async (userId, platform) => {
     console.log(`[deletePlatformTransactions] Deleting ${platform} transactions for user ${userId}`);
-    
+
     const { data, error, count } = await supabase
         .from('transactions')
         .delete()
         .eq('user_id', userId)
         .eq('account', platform)
         .select('count', { count: 'exact' });
-    
+
     if (error) {
         console.error(`[deletePlatformTransactions] Error deleting ${platform}:`, error);
         return 0;
     }
-    
+
     console.log(`[deletePlatformTransactions] Deleted ${count || 0} ${platform} transactions`);
     return count || 0;
 };
@@ -32,11 +32,11 @@ const getCurrentCredentials = async (userId) => {
         .select('*')
         .eq('user_id', userId)
         .single();
-    
+
     if (error || !data) {
         return null;
     }
-    
+
     return {
         ethAddress: data.eth_address,
         etherscanApiKey: data.etherscan_api_key,
@@ -63,11 +63,11 @@ const getCurrentCredentials = async (userId) => {
 export const getAccounts = async (req, res) => {
     try {
         const user = req.user;
-        
+
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "User not authenticated" 
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated"
             });
         }
 
@@ -88,9 +88,9 @@ export const getAccounts = async (req, res) => {
 
     } catch (err) {
         console.error('Error fetching account:', err);
-        res.status(500).json({ 
-            success: false, 
-            message: err.message || 'Failed to fetch account data' 
+        res.status(500).json({
+            success: false,
+            message: err.message || 'Failed to fetch account data'
         });
     }
 };
@@ -104,9 +104,9 @@ export const saveAccount = async (req, res) => {
         const accountData = req.body;
 
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "User not authenticated" 
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated"
             });
         }
 
@@ -119,23 +119,23 @@ export const saveAccount = async (req, res) => {
 
         let result;
         let platformsToRefetch = [];
-        
+
         if (existingAccount) {
             // Check which platforms changed
             const binanceChanged = (accountData.binance_api_key !== existingAccount.binance_api_key) ||
-                                  (accountData.binance_api_secret !== existingAccount.binance_api_secret);
-            
+                (accountData.binance_api_secret !== existingAccount.binance_api_secret);
+
             const kucoinChanged = (accountData.kucoin_api_key !== existingAccount.kucoin_api_key) ||
-                                 (accountData.kucoin_api_secret !== existingAccount.kucoin_api_secret) ||
-                                 (accountData.kucoin_passphrase !== existingAccount.kucoin_passphrase);
-            
+                (accountData.kucoin_api_secret !== existingAccount.kucoin_api_secret) ||
+                (accountData.kucoin_passphrase !== existingAccount.kucoin_passphrase);
+
             const coinbaseChanged = (accountData.coinbase_api_key !== existingAccount.coinbase_api_key) ||
-                                   (accountData.coinbase_api_secret !== existingAccount.coinbase_api_secret) ||
-                                   (accountData.coinbase_passphrase !== existingAccount.coinbase_passphrase);
-            
+                (accountData.coinbase_api_secret !== existingAccount.coinbase_api_secret) ||
+                (accountData.coinbase_passphrase !== existingAccount.coinbase_passphrase);
+
             const ethChanged = (accountData.eth_address !== existingAccount.eth_address) ||
-                              (accountData.etherscan_api_key !== existingAccount.etherscan_api_key);
-            
+                (accountData.etherscan_api_key !== existingAccount.etherscan_api_key);
+
             // Delete old transactions for changed platforms
             if (binanceChanged && existingAccount.binance_api_key) {
                 const deleted = await deletePlatformTransactions(user.id, 'binance');
@@ -144,7 +144,7 @@ export const saveAccount = async (req, res) => {
                     platformsToRefetch.push('binance');
                 }
             }
-            
+
             if (kucoinChanged && existingAccount.kucoin_api_key) {
                 const deleted = await deletePlatformTransactions(user.id, 'kucoin');
                 console.log(`[saveAccount] Deleted ${deleted} old KuCoin transactions`);
@@ -152,7 +152,7 @@ export const saveAccount = async (req, res) => {
                     platformsToRefetch.push('kucoin');
                 }
             }
-            
+
             if (coinbaseChanged && existingAccount.coinbase_api_key) {
                 const deleted = await deletePlatformTransactions(user.id, 'coinbase');
                 console.log(`[saveAccount] Deleted ${deleted} old Coinbase transactions`);
@@ -160,7 +160,7 @@ export const saveAccount = async (req, res) => {
                     platformsToRefetch.push('coinbase');
                 }
             }
-            
+
             if (ethChanged && existingAccount.eth_address) {
                 const deleted = await deletePlatformTransactions(user.id, 'ethereum');
                 console.log(`[saveAccount] Deleted ${deleted} old Ethereum transactions`);
@@ -168,7 +168,7 @@ export const saveAccount = async (req, res) => {
                     platformsToRefetch.push('ethereum');
                 }
             }
-            
+
             // Update account
             const { data, error } = await supabase
                 .from('accounts')
@@ -194,7 +194,7 @@ export const saveAccount = async (req, res) => {
 
             if (error) throw error;
             result = data;
-            
+
             // Fetch all platforms for new account
             if (accountData.binance_api_key) platformsToRefetch.push('binance');
             if (accountData.kucoin_api_key) platformsToRefetch.push('kucoin');
@@ -229,7 +229,7 @@ export const saveAccount = async (req, res) => {
                 console.log(`[saveAccount] Starting transaction fetch for platforms: ${platformsToRefetch.length > 0 ? platformsToRefetch.join(', ') : 'all'} for user ${user.id}...`);
                 const allTransactions = await getAllTransactionsFromAPIs(userCreds);
                 console.log(`[saveAccount] Fetched ${allTransactions.length} transactions`);
-                
+
                 transactionsSaved = await saveTransactionsToDB(user.id, allTransactions, true);
                 console.log(`[saveAccount] Saved ${transactionsSaved} transactions`);
             } catch (fetchError) {
@@ -245,7 +245,7 @@ export const saveAccount = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: transactionsSaved > 0 
+            message: transactionsSaved > 0
                 ? `Account saved successfully with ${transactionsSaved} transactions synced`
                 : 'Account saved successfully (no new transactions found)',
             account: result,
@@ -254,9 +254,9 @@ export const saveAccount = async (req, res) => {
 
     } catch (err) {
         console.error('Error saving account:', err);
-        res.status(500).json({ 
-            success: false, 
-            message: err.message || 'Failed to save account' 
+        res.status(500).json({
+            success: false,
+            message: err.message || 'Failed to save account'
         });
     }
 };
@@ -271,9 +271,9 @@ export const updateAccount = async (req, res) => {
         const accountData = req.body;
 
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "User not authenticated" 
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated"
             });
         }
 
@@ -286,9 +286,9 @@ export const updateAccount = async (req, res) => {
             .single();
 
         if (fetchError || !existingAccount) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Account not found" 
+            return res.status(404).json({
+                success: false,
+                message: "Account not found"
             });
         }
 
@@ -300,10 +300,10 @@ export const updateAccount = async (req, res) => {
         const binanceHasOld = existingAccount.binance_api_key && existingAccount.binance_api_secret;
         const binanceHasNew = accountData.binance_api_key && accountData.binance_api_secret;
         const binanceChanged = binanceHasOld !== binanceHasNew ||
-                              (binanceHasOld && binanceHasNew && 
-                               (accountData.binance_api_key !== existingAccount.binance_api_key ||
-                                accountData.binance_api_secret !== existingAccount.binance_api_secret));
-        
+            (binanceHasOld && binanceHasNew &&
+                (accountData.binance_api_key !== existingAccount.binance_api_key ||
+                    accountData.binance_api_secret !== existingAccount.binance_api_secret));
+
         if (binanceChanged) {
             if (binanceHasOld) platformsToDelete.push('binance');
             if (binanceHasNew) platformsToRefetch.push('binance');
@@ -313,11 +313,11 @@ export const updateAccount = async (req, res) => {
         const kucoinHasOld = existingAccount.kucoin_api_key && existingAccount.kucoin_api_secret && existingAccount.kucoin_passphrase;
         const kucoinHasNew = accountData.kucoin_api_key && accountData.kucoin_api_secret && accountData.kucoin_passphrase;
         const kucoinChanged = kucoinHasOld !== kucoinHasNew ||
-                             (kucoinHasOld && kucoinHasNew && 
-                              (accountData.kucoin_api_key !== existingAccount.kucoin_api_key ||
-                               accountData.kucoin_api_secret !== existingAccount.kucoin_api_secret ||
-                               accountData.kucoin_passphrase !== existingAccount.kucoin_passphrase));
-        
+            (kucoinHasOld && kucoinHasNew &&
+                (accountData.kucoin_api_key !== existingAccount.kucoin_api_key ||
+                    accountData.kucoin_api_secret !== existingAccount.kucoin_api_secret ||
+                    accountData.kucoin_passphrase !== existingAccount.kucoin_passphrase));
+
         if (kucoinChanged) {
             if (kucoinHasOld) platformsToDelete.push('kucoin');
             if (kucoinHasNew) platformsToRefetch.push('kucoin');
@@ -327,11 +327,11 @@ export const updateAccount = async (req, res) => {
         const coinbaseHasOld = existingAccount.coinbase_api_key && existingAccount.coinbase_api_secret && existingAccount.coinbase_passphrase;
         const coinbaseHasNew = accountData.coinbase_api_key && accountData.coinbase_api_secret && accountData.coinbase_passphrase;
         const coinbaseChanged = coinbaseHasOld !== coinbaseHasNew ||
-                               (coinbaseHasOld && coinbaseHasNew && 
-                                (accountData.coinbase_api_key !== existingAccount.coinbase_api_key ||
-                                 accountData.coinbase_api_secret !== existingAccount.coinbase_api_secret ||
-                                 accountData.coinbase_passphrase !== existingAccount.coinbase_passphrase));
-        
+            (coinbaseHasOld && coinbaseHasNew &&
+                (accountData.coinbase_api_key !== existingAccount.coinbase_api_key ||
+                    accountData.coinbase_api_secret !== existingAccount.coinbase_api_secret ||
+                    accountData.coinbase_passphrase !== existingAccount.coinbase_passphrase));
+
         if (coinbaseChanged) {
             if (coinbaseHasOld) platformsToDelete.push('coinbase');
             if (coinbaseHasNew) platformsToRefetch.push('coinbase');
@@ -341,10 +341,10 @@ export const updateAccount = async (req, res) => {
         const ethHasOld = existingAccount.eth_address && existingAccount.etherscan_api_key;
         const ethHasNew = accountData.eth_address && accountData.etherscan_api_key;
         const ethChanged = ethHasOld !== ethHasNew ||
-                          (ethHasOld && ethHasNew && 
-                           (accountData.eth_address !== existingAccount.eth_address ||
-                            accountData.etherscan_api_key !== existingAccount.etherscan_api_key));
-        
+            (ethHasOld && ethHasNew &&
+                (accountData.eth_address !== existingAccount.eth_address ||
+                    accountData.etherscan_api_key !== existingAccount.etherscan_api_key));
+
         if (ethChanged) {
             if (ethHasOld) platformsToDelete.push('ethereum');
             if (ethHasNew) platformsToRefetch.push('ethereum');
@@ -389,7 +389,7 @@ export const updateAccount = async (req, res) => {
                         passphrase: accountData.coinbase_passphrase || existingAccount.coinbase_passphrase
                     }
                 };
-                
+
                 console.log(`[updateAccount] Fetching transactions for platforms: ${platformsToRefetch.join(', ')}`);
                 const allTransactions = await getAllTransactionsFromAPIs(userCreds);
                 transactionsSaved = await saveTransactionsToDB(user.id, allTransactions, true);
@@ -401,7 +401,7 @@ export const updateAccount = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: transactionsSaved > 0 
+            message: transactionsSaved > 0
                 ? `Account updated successfully with ${transactionsSaved} transactions synced`
                 : 'Account updated successfully',
             account: data,
@@ -412,9 +412,9 @@ export const updateAccount = async (req, res) => {
 
     } catch (err) {
         console.error('Error updating account:', err);
-        res.status(500).json({ 
-            success: false, 
-            message: err.message || 'Failed to update account' 
+        res.status(500).json({
+            success: false,
+            message: err.message || 'Failed to update account'
         });
     }
 };
@@ -428,9 +428,9 @@ export const deleteAccount = async (req, res) => {
         const { accountId } = req.params;
 
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "User not authenticated" 
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated"
             });
         }
 
@@ -442,9 +442,9 @@ export const deleteAccount = async (req, res) => {
             .single();
 
         if (fetchError || !existingAccount) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Account not found" 
+            return res.status(404).json({
+                success: false,
+                message: "Account not found"
             });
         }
 
@@ -474,9 +474,9 @@ export const deleteAccount = async (req, res) => {
 
     } catch (err) {
         console.error('Error deleting account:', err);
-        res.status(500).json({ 
-            success: false, 
-            message: err.message || 'Failed to delete account' 
+        res.status(500).json({
+            success: false,
+            message: err.message || 'Failed to delete account'
         });
     }
 };
@@ -490,16 +490,16 @@ export const deleteExchangeData = async (req, res) => {
         const { exchangeType } = req.body;
 
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "User not authenticated" 
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated"
             });
         }
 
         if (!exchangeType) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Exchange type is required" 
+            return res.status(400).json({
+                success: false,
+                message: "Exchange type is required"
             });
         }
 
@@ -511,11 +511,11 @@ export const deleteExchangeData = async (req, res) => {
         };
 
         const fieldsToClear = exchangeFields[exchangeType];
-        
+
         if (!fieldsToClear) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Invalid exchange type" 
+            return res.status(400).json({
+                success: false,
+                message: "Invalid exchange type"
             });
         }
 
@@ -538,7 +538,7 @@ export const deleteExchangeData = async (req, res) => {
             kucoin: 'kucoin',
             coinbase: 'coinbase'
         };
-        
+
         const platform = platformMap[exchangeType];
         if (platform) {
             const deletedCount = await deletePlatformTransactions(user.id, platform);
@@ -552,9 +552,9 @@ export const deleteExchangeData = async (req, res) => {
 
     } catch (err) {
         console.error('Error deleting exchange data:', err);
-        res.status(500).json({ 
-            success: false, 
-            message: err.message || 'Failed to delete exchange data' 
+        res.status(500).json({
+            success: false,
+            message: err.message || 'Failed to delete exchange data'
         });
     }
 };

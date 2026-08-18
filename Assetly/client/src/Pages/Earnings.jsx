@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { FaInfoCircle } from "react-icons/fa";
 import { IoIosArrowRoundUp } from "react-icons/io";
 import { motion } from 'framer-motion';
+import API from '../Api/axios';
 
 
 export default function Earnings() {
@@ -93,24 +94,10 @@ export default function Earnings() {
 
     const fetchEarnings = async () => {
 
-
-
         try {
-            const apiUrl =
-                import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
-
-            const res = await fetch(`${apiUrl}/api/earnings/data`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("access_token")}`
-                }
-            });
-
-            const data = await res.json();
+            const { data } = await API.get('/api/earnings/data');
 
             console.log("EARNINGS API RESPONSE:", data);
-
-            if (!res.ok)
-                throw new Error(data.message || "Failed to fetch earnings");
 
             const snapshots = data.snapshots;
 

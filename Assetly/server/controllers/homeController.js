@@ -26,15 +26,15 @@ export const homeController = async (req, res) => {
         if (error) throw error;
 
         // Fetch monthly balance history
-       console.log("User ID:", userId);
+        console.log("User ID:", userId);
 
-const { data: snapshots, error: snapshotError } = await supabase
-    .from("monthly_account_snapshots")
-    .select("*")
-    .eq("user_id", userId);
+        const { data: snapshots, error: snapshotError } = await supabase
+            .from("monthly_account_snapshots")
+            .select("*")
+            .eq("user_id", userId);
 
-console.log("Snapshot error:", snapshotError);
-console.log("Snapshots:", snapshots);
+        console.log("Snapshot error:", snapshotError);
+        console.log("Snapshots:", snapshots);
 
         if (snapshotError) throw snapshotError;
 

@@ -1,6 +1,7 @@
 import { useState, useContext, useEffect } from "react";
 import { AppContext } from "../Context/appContext";
 import API from "../Api/axios";
+import { setAccessToken } from "../Api/axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
@@ -35,47 +36,24 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Prevent multiple requests
     if (isLoading) return;
-
     setIsLoading(true);
 
     try {
-      const { data } = await API.post(
-        `/api/auth/signin`,
-        formData
-      );
+      const { data } = await API.post("/api/auth/signin", {
+        email: formData.email,
+        password: formData.password,
+      });
 
       if (data.success) {
-        toast.success("Login successful!");
-
-        console.log("Login response data:", data);
-
-        getUserData(data.session?.access_token);
+        setAccessToken(data.access_token); // from axios.js
+        setUserData(data.user);
         setIsLoggedIn(true);
-
-        if (data.session?.access_token) {
-          localStorage.setItem(
-            "access_token",
-            data.session.access_token
-          );
-        }
-
+        toast.success("Login successful!");
         navigate("/home");
-
-      } else {
-        toast.error(data.message || "Login failed!");
       }
-
     } catch (error) {
-      console.error("Login error:", error);
-
-      toast.error(
-        error.response?.data?.message ||
-        "Something went wrong!"
-      );
-
+      toast.error(error.response?.data?.message || "Login failed");
     } finally {
       setIsLoading(false);
     }
@@ -84,14 +62,7 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     try {
       const { data } = await API.get(`/api/auth/googleLogin`);
-      console.log("Google login data:", data);
-      if (data.url) {
-        console.log(data);
-        window.location.href = data.url;
-        getUserData(data.session?.access_token);
-        console.log("Access Token:", data.session?.access_token);
-        setIsLoggedIn(true);
-      }
+      if (data.url) window.location.href = data.url;
     } catch (error) {
       toast.error("Google login failed");
     }

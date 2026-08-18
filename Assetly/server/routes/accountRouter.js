@@ -6,11 +6,11 @@ import {
     deleteAccount,
     deleteExchangeData
 } from '../controllers/accountsController.js';
-import { verifySupabaseToken } from '../middleware/verifySupabaseToken.js';
+import authenticateUser from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.use(verifySupabaseToken);
+router.use(authenticateUser); // Apply authentication middleware to all routes in this router
 
 router.get('/accounts', getAccounts);
 router.post('/accounts', saveAccount);

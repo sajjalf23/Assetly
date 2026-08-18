@@ -1,8 +1,8 @@
 import express from "express"
 import { homeController } from '../controllers/homeController.js'
-import {verifySupabaseToken} from '../middleware/verifySupabaseToken.js';
+import authenticateUser from "../middleware/authMiddleware.js";
 
 const router = express.Router()
 
-router.get('/page', verifySupabaseToken, homeController)
+router.get('/page', authenticateUser, homeController)
 export default router;

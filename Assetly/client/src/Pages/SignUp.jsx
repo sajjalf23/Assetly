@@ -37,19 +37,13 @@ const SignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setIsLoading(true);
 
     try {
       const { data } = await API.post(`/api/auth/register`, formData);
 
       if (data.success) {
-        toast.success("Account created successfully!");
-        setUserData(data.user);
-        setIsLoggedIn(true);
-        if (data.session?.access_token) {
-          localStorage.setItem("access_token", data.session.access_token);
-        }
+        toast.success(data.message || "Account created! Please check your email to confirm.");
         navigate("/auth/login");
       } else {
         toast.error(data.message || "Registration failed!");
@@ -66,8 +60,6 @@ const SignUp = () => {
     try {
       const { data } = await API.get(`/api/auth/googleLogin`);
       if (data.url) window.location.href = data.url;
-      getUserData(data.session?.access_token);
-      setIsLoggedIn(true);
     } catch (error) {
       toast.error("Google login failed");
     }

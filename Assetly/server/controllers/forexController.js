@@ -1,5 +1,6 @@
 import fetch from "node-fetch";
 import supabase from '../config/supabaseClient.js';
+import axios from "axios"
 
 const OANDA_BASE_URL = "https://api-fxpractice.oanda.com";
 
@@ -165,6 +166,32 @@ const getForexPortfolioFromDB = async (userId) => {
 
   return Object.values(merged)
     .sort((a, b) => b.amount - a.amount);
+};
+
+export const getForexMarketOverview = async (req, res) => {
+  try {
+    const { data } = await axios.get(
+      "https://api.coingecko.com/api/v3/coins/markets",
+      {
+        params: {
+          vs_currency: "usd",
+          ids: "pax-gold,tether-gold,kinesis-silver",
+        },
+      }
+    );
+
+    const gold = data.find(c => c.id === "pax-gold") || data.find(c => c.id === "tether-gold");
+    const silver = data.find(c => c.id === "kinesis-silver");
+
+    res.json({
+      success: true,
+      gold: gold?.current_price ?? null,
+      silver: silver?.current_price ?? null,
+    });
+  } catch (err) {
+    console.error("Forex market overview error:", err.message);
+    res.status(500).json({ success: false, message: "Failed to fetch market data" });
+  }
 };
 
 // Get last 6 months forex snapshots

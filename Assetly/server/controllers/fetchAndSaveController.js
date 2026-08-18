@@ -16,7 +16,7 @@ const getUserCredentialsFromDB = async (userId) => {
   }
 
   console.log('Fetching credentials for user:', userId);
-  
+
   // Don't use .single() - it throws if no record found
   const { data, error } = await supabase
     .from('accounts')
@@ -69,7 +69,7 @@ const getUserCredentialsFromDB = async (userId) => {
 // ======================================================
 export const saveTransactionsToDB = async (userId, transactions, isInitialFetch = false) => {
   console.log(`[saveTransactionsToDB] Saving ${transactions?.length || 0} transactions for user ${userId}`);
-  
+
   if (!transactions || !transactions.length) {
     console.log(`[saveTransactionsToDB] No transactions to save`);
     return 0;
@@ -81,7 +81,7 @@ export const saveTransactionsToDB = async (userId, transactions, isInitialFetch 
   // Process each transaction individually
   for (let i = 0; i < transactions.length; i++) {
     const tx = transactions[i];
-    
+
     try {
       // Convert date properly
       let transactionDate;
@@ -94,7 +94,7 @@ export const saveTransactionsToDB = async (userId, transactions, isInitialFetch 
       } else {
         transactionDate = new Date().toISOString();
       }
-      
+
       // Prepare clean data matching your schema
       const transactionData = {
         user_id: userId,
@@ -109,7 +109,7 @@ export const saveTransactionsToDB = async (userId, transactions, isInitialFetch 
         fee: tx.fee ? Number(tx.fee) : 0,
         raw: tx.raw || null
       };
-      
+
       // Use upsert to handle duplicates gracefully
       const { error: upsertError } = await supabase
         .from('transactions')
@@ -117,20 +117,20 @@ export const saveTransactionsToDB = async (userId, transactions, isInitialFetch 
           onConflict: 'user_id,account,external_id',
           ignoreDuplicates: false
         });
-      
+
       if (upsertError) {
         console.error(`[saveTransactionsToDB] Error saving tx ${i + 1}:`, upsertError.message);
         errorCount++;
       } else {
         savedCount++;
       }
-      
+
     } catch (err) {
       console.error(`[saveTransactionsToDB] Exception for tx ${i + 1}:`, err.message);
       errorCount++;
     }
   }
-  
+
   console.log(`[saveTransactionsToDB] Complete - Saved: ${savedCount}, Errors: ${errorCount}`);
   return savedCount;
 };
@@ -140,7 +140,7 @@ export const saveTransactionsToDB = async (userId, transactions, isInitialFetch 
 // ======================================================
 export const getEthereumTransactions = async (ethAddress, etherscanApiKey) => {
   console.log(`[getEthereumTransactions] Fetching for address: ${ethAddress?.substring(0, 15)}...`);
-  
+
   if (!ethAddress || !etherscanApiKey) {
     console.log(`[getEthereumTransactions] Missing credentials`);
     return [];
@@ -149,10 +149,10 @@ export const getEthereumTransactions = async (ethAddress, etherscanApiKey) => {
   try {
     // Use V2 API endpoint
     const url = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=tokentx&address=${ethAddress}&page=1&offset=100&sort=desc&apikey=${etherscanApiKey}`;
-    
+
     const response = await fetch(url);
     const data = await response.json();
-    
+
     // Check if we got a valid array
     if (!Array.isArray(data.result)) {
       console.log(`[getEthereumTransactions] No valid transaction data`);
@@ -164,7 +164,7 @@ export const getEthereumTransactions = async (ethAddress, etherscanApiKey) => {
     const mapped = data.result.map((tx) => {
       let decimals = parseInt(tx.tokenDecimal);
       if (isNaN(decimals)) decimals = 18;
-      
+
       let quantity = 0;
       try {
         const rawValue = tx.value || "0";
@@ -175,7 +175,7 @@ export const getEthereumTransactions = async (ethAddress, etherscanApiKey) => {
       }
 
       const isBuy = tx.to?.toLowerCase() === ethAddress.toLowerCase();
-      
+
       return {
         account: "ethereum",
         external_id: tx.hash,
@@ -189,7 +189,7 @@ export const getEthereumTransactions = async (ethAddress, etherscanApiKey) => {
         raw: tx,
       };
     });
-    
+
     console.log(`[getEthereumTransactions] Mapped ${mapped.length} transactions`);
     return mapped;
   } catch (err) {
@@ -205,7 +205,7 @@ const BINANCE_SYMBOLS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"];
 
 export const getBinanceTransactions = async ({ apiKey, apiSecret }) => {
   console.log(`[getBinanceTransactions] Fetching transactions`);
-  
+
   if (!apiKey || !apiSecret) {
     console.log(`[getBinanceTransactions] Missing credentials`);
     return [];
@@ -265,7 +265,7 @@ export const getBinanceTransactions = async ({ apiKey, apiSecret }) => {
 // ======================================================
 export const getKuCoinTransactions = async ({ apiKey, apiSecret, passphrase }) => {
   console.log(`[getKuCoinTransactions] Fetching transactions`);
-  
+
   if (!apiKey || !apiSecret || !passphrase) {
     console.log(`[getKuCoinTransactions] Missing credentials`);
     return [];
@@ -329,7 +329,7 @@ export const getKuCoinTransactions = async ({ apiKey, apiSecret, passphrase }) =
 // ======================================================
 export const getCoinbaseTransactions = async ({ apiKey, apiSecret, passphrase }) => {
   console.log(`[getCoinbaseTransactions] Fetching transactions`);
-  
+
   if (!apiKey || !apiSecret || !passphrase) {
     console.log(`[getCoinbaseTransactions] Missing credentials`);
     return [];
@@ -391,9 +391,9 @@ export const getCoinbaseTransactions = async ({ apiKey, apiSecret, passphrase })
 // ======================================================
 export const getAllTransactionsFromAPIs = async (creds) => {
   console.log(`[getAllTransactionsFromAPIs] Fetching from all available platforms`);
-  
+
   const promises = [];
-  
+
   // Only add promises for credentials that exist
   if (creds.ethAddress && creds.etherscanApiKey) {
     console.log('Adding Ethereum transactions fetch');
@@ -401,31 +401,31 @@ export const getAllTransactionsFromAPIs = async (creds) => {
   } else {
     promises.push(Promise.resolve([]));
   }
-  
+
   if (creds.binance?.apiKey && creds.binance?.apiSecret) {
     console.log('Adding Binance transactions fetch');
     promises.push(getBinanceTransactions(creds.binance));
   } else {
     promises.push(Promise.resolve([]));
   }
-  
+
   if (creds.kucoin?.apiKey && creds.kucoin?.apiSecret && creds.kucoin?.passphrase) {
     console.log('Adding KuCoin transactions fetch');
     promises.push(getKuCoinTransactions(creds.kucoin));
   } else {
     promises.push(Promise.resolve([]));
   }
-  
+
   if (creds.coinbase?.apiKey && creds.coinbase?.apiSecret && creds.coinbase?.passphrase) {
     console.log('Adding Coinbase transactions fetch');
     promises.push(getCoinbaseTransactions(creds.coinbase));
   } else {
     promises.push(Promise.resolve([]));
   }
-  
+
   const results = await Promise.all(promises);
   const allTransactions = results.flat();
-  
+
   console.log(`[getAllTransactionsFromAPIs] Total transactions: ${allTransactions.length}`);
   return allTransactions;
 };
@@ -436,28 +436,28 @@ export const getAllTransactionsFromAPIs = async (creds) => {
 export const initialFetchAndSaveTransactions = async (req, res) => {
   const startTime = Date.now();
   console.log(`[initialFetchAndSaveTransactions] Request started`);
-  
+
   try {
     const userId = req.user?.id;
-    
+
     if (!userId) {
       return res.status(401).json({
         success: false,
         message: "User not authenticated",
       });
     }
-    
+
     console.log(`[initialFetchAndSaveTransactions] Processing for user: ${userId}`);
 
     // Step 1: Get credentials
     const creds = await getUserCredentialsFromDB(userId);
-    
+
     // Step 2: Fetch transactions from APIs
     const transactions = await getAllTransactionsFromAPIs(creds);
-    
+
     // Step 3: Save to database
     const saved = await saveTransactionsToDB(userId, transactions, true);
-    
+
     const duration = Date.now() - startTime;
     console.log(`[initialFetchAndSaveTransactions] Complete - Fetched: ${transactions.length}, Saved: ${saved}, Duration: ${duration}ms`);
 
@@ -467,11 +467,11 @@ export const initialFetchAndSaveTransactions = async (req, res) => {
       saved: saved,
       duration_ms: duration
     });
-    
+
   } catch (err) {
     const duration = Date.now() - startTime;
     console.error(`[initialFetchAndSaveTransactions] Error:`, err.message);
-    
+
     return res.status(500).json({
       success: false,
       error: err.message,
@@ -486,7 +486,7 @@ export const initialFetchAndSaveTransactions = async (req, res) => {
 export const dailyTransactionSync = async (req, res) => {
   const startTime = Date.now();
   console.log(`[dailyTransactionSync] Sync started`);
-  
+
   try {
     // Get all users with accounts
     const { data: users, error } = await supabase
@@ -507,7 +507,7 @@ export const dailyTransactionSync = async (req, res) => {
     for (let i = 0; i < (users?.length || 0); i++) {
       const user = users[i];
       console.log(`[dailyTransactionSync] Processing user ${i + 1}/${users.length}: ${user.user_id}`);
-      
+
       const creds = {
         ethAddress: user.eth_address,
         etherscanApiKey: user.etherscan_api_key,
@@ -529,10 +529,10 @@ export const dailyTransactionSync = async (req, res) => {
 
       const transactions = await getAllTransactionsFromAPIs(creds);
       totalFetched += transactions.length;
-      
+
       const saved = await saveTransactionsToDB(user.user_id, transactions, false);
       totalSaved += saved;
-      
+
       userResults.push({
         user_id: user.user_id,
         fetched: transactions.length,
@@ -542,7 +542,7 @@ export const dailyTransactionSync = async (req, res) => {
 
     const totalDuration = Date.now() - startTime;
     console.log(`[dailyTransactionSync] Complete - Users: ${users?.length || 0}, Fetched: ${totalFetched}, Saved: ${totalSaved}, Duration: ${totalDuration}ms`);
-    
+
     return res.status(200).json({
       success: true,
       totalFetched,
@@ -551,11 +551,11 @@ export const dailyTransactionSync = async (req, res) => {
       usersProcessed: users?.length || 0,
       userResults: userResults
     });
-    
+
   } catch (err) {
     const totalDuration = Date.now() - startTime;
     console.error(`[dailyTransactionSync] Error:`, err.message);
-    
+
     return res.status(500).json({
       success: false,
       error: err.message,

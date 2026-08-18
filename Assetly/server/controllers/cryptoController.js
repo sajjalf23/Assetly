@@ -562,78 +562,78 @@ export const getCoinbasePortfolio = async ({ userId, apiKey, apiSecret, passphra
 
 
 export const getCoinGeckoData = async (req, res) => {
-    try {
-        const { symbols } = req.body;
+  try {
+    const { symbols } = req.body;
 
-        const coinMapping = {
-            BTC: "bitcoin",
-            ETH: "ethereum",
-            BNB: "binancecoin",
-            SOL: "solana",
-            XRP: "ripple",
-            DOGE: "dogecoin",
-            ADA: "cardano",
-            LTC: "litecoin",
-            TRX: "tron",
-            AVAX: "avalanche-2"
-        };
+    const coinMapping = {
+      BTC: "bitcoin",
+      ETH: "ethereum",
+      BNB: "binancecoin",
+      SOL: "solana",
+      XRP: "ripple",
+      DOGE: "dogecoin",
+      ADA: "cardano",
+      LTC: "litecoin",
+      TRX: "tron",
+      AVAX: "avalanche-2"
+    };
 
-        const ids = [
-            ...new Set(
-                symbols
-                    .map(s => coinMapping[s.toUpperCase()])
-                    .filter(Boolean)
-            )
-        ];
+    const ids = [
+      ...new Set(
+        symbols
+          .map(s => coinMapping[s.toUpperCase()])
+          .filter(Boolean)
+      )
+    ];
 
-        const [pricesRes, marketRes] = await Promise.all([
-            axios.get(
-                `https://api.coingecko.com/api/v3/simple/price`,
-                {
-                    params: {
-                        ids: ids.join(","),
-                        vs_currencies: "usd",
-                        include_24hr_change: true
-                    }
-                }
-            ),
+    const [pricesRes, marketRes] = await Promise.all([
+      axios.get(
+        `https://api.coingecko.com/api/v3/simple/price`,
+        {
+          params: {
+            ids: ids.join(","),
+            vs_currencies: "usd",
+            include_24hr_change: true
+          }
+        }
+      ),
 
-            axios.get(
-                "https://api.coingecko.com/api/v3/coins/markets",
-                {
-                    params: {
-                        vs_currency: "usd",
-                        order: "market_cap_desc",
-                        per_page: 4,
-                        page: 1,
-                        sparkline: false
-                    }
-                }
-            )
-        ]);
+      axios.get(
+        "https://api.coingecko.com/api/v3/coins/markets",
+        {
+          params: {
+            vs_currency: "usd",
+            order: "market_cap_desc",
+            per_page: 4,
+            page: 1,
+            sparkline: false
+          }
+        }
+      )
+    ]);
 
-        const symbolPrices = {};
+    const symbolPrices = {};
 
-Object.entries(coinMapping).forEach(([symbol, coinId]) => {
-    if (pricesRes.data[coinId]) {
+    Object.entries(coinMapping).forEach(([symbol, coinId]) => {
+      if (pricesRes.data[coinId]) {
         symbolPrices[symbol] = pricesRes.data[coinId];
-    }
-});
+      }
+    });
 
-        res.json({
-            success: true,
-            prices: symbolPrices,
-            market: marketRes.data
-        });
+    res.json({
+      success: true,
+      prices: symbolPrices,
+      market: marketRes.data
+    });
 
-    } catch (err) {
-        console.log(err.message);
+  } catch (err) {
+    console.log(err.message);
 
-        res.status(500).json({
-            success:false,
-            message:"Failed to fetch CoinGecko data"
-        });
-    }
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch CoinGecko data"
+    });
+  }
 };
 
 

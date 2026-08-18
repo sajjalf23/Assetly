@@ -1,9 +1,9 @@
 import express from "express";
-import { verifySupabaseToken } from "../middleware/verifySupabaseToken.js";
+import authenticateUser from "../middleware/authMiddleware.js";
 import { overviewController } from "../controllers/overviewController.js";
 
 const router = express.Router();
 
-router.get("/", verifySupabaseToken, overviewController);
+router.get("/", authenticateUser, overviewController);
 
 export default router;

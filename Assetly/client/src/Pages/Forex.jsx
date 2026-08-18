@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis
 import { LuArrowRightLeft, LuSearch } from "react-icons/lu";
 import countryList from '../data/countryCode';
 import { AppContext } from '../context/appContext';
+import API from '../Api/axios';
 
 // Colors
 const COLORS = ["#2285c3", "#c35f22", "#c38d22", "#227c5d", "#8c22c3", "#c3225f"];
@@ -11,14 +12,15 @@ const COLORS = ["#2285c3", "#c35f22", "#c38d22", "#227c5d", "#8c22c3", "#c3225f"
 const CustomToolTip = ({ active, payload, total }) => {
     if (active && payload && payload.length) {
         return (
-            <div className='bg-[#3a3a3a] pl-1 pr-3 shadow-lg'>
-                <p>{payload[0].name}</p>
-                <p>{payload[0].value.toLocaleString('de-DE')} Units</p>
-                <p>{((payload[0].value / total) * 100).toFixed(2)}%</p>
+            <div className='bg-[#3a3a3a] p-2 rounded shadow-lg text-white text-xs'>
+                <p className='font-semibold'>{payload[0].name}</p>
+                <p>{payload[0].value.toLocaleString()} Units</p>
+                <p>{total > 0 ? ((payload[0].value / total) * 100).toFixed(2) : 0}%</p>
             </div>
-        )
+        );
     }
-}
+    return null;
+};
 
 // Custom Line tooltip
 const CustomToolTipLine = ({ active, payload }) => {
@@ -47,6 +49,11 @@ export default function Forex() {
     const [toValue, setToValue] = useState("");
     const [showResult, setShowResult] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Loading states
+    const [loadingMarket, setLoadingMarket] = useState(true);
+    const [loadingData, setLoadingData] = useState(true);
+
     const [marketOverview, setMarketOverview] = useState({
         gold: null,
         silver: null,
@@ -62,26 +69,16 @@ export default function Forex() {
 
     // Fetch backend trades
     const fetchBackendData = async () => {
+        setLoadingData(true);
         try {
-            const res = await fetch(`${BackendUrl}/api/forex/trades`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-                },
-            });
-            const data = await res.json();
+            const { data } = await API.get('/api/forex/trades');
 
-            if (!data.success) {
-                throw new Error(data.message);
-            }
+            if (!data.success) throw new Error(data.message);
 
-            const portfolio = Array.isArray(data.portfolio)
-                ? data.portfolio
-                : [];
+            const portfolio = Array.isArray(data.portfolio) ? data.portfolio : [];
 
             setSummary(data.summary || null);
-
             setSnapshots(data.forexSnapshots || []);
-            console.log("Snapshots:", data.forexSnapshots);
 
             const mappedData = portfolio
                 .map(asset => ({
@@ -95,46 +92,26 @@ export default function Forex() {
                 .sort((a, b) => b.value - a.value);
 
             setChartData(mappedData);
-
-            const totalExposure = mappedData.reduce(
-                (sum, item) => sum + item.value,
-                0
-            );
-
-            setTotal(totalExposure);
-
+            setTotal(mappedData.reduce((sum, item) => sum + item.value, 0));
         } catch (err) {
             console.error("Error fetching backend data:", err);
-        }
-    }
-
-    const fetchMarketOverview = async () => {
-        try {
-            const res = await fetch(
-                "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=pax-gold,tether-gold,kinesis-silver"
-            );
-
-            if (!res.ok) throw new Error("Failed to fetch market data");
-
-            const data = await res.json();
-
-            const gold =
-                data.find(c => c.id === "pax-gold") ||
-                data.find(c => c.id === "tether-gold");
-
-            const silver =
-                data.find(c => c.id === "kinesis-silver");
-
-            setMarketOverview({
-                gold: gold?.current_price ?? null,
-                silver: silver?.current_price ?? null
-            });
-
-        } catch (err) {
-            console.error(err);
+        } finally {
+            setLoadingData(false);
         }
     };
-
+    const fetchMarketOverview = async () => {
+        try {
+            const { data } = await API.get('/api/forex/market-overview');
+            setMarketOverview({
+                gold: data.gold,
+                silver: data.silver,
+            });
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoadingMarket(false);
+        }
+    };
 
     useEffect(() => {
         fetchBackendData();
@@ -161,10 +138,11 @@ export default function Forex() {
     );
 
     async function swapPairs() {
-        let temp = fromCurr;
-        setFromCurr(toCurr);
-        setToCurr(temp);
-        fetchDataWithCurrencies(toCurr, temp);
+        const newFrom = toCurr;
+        const newTo = fromCurr;
+        setFromCurr(newFrom);
+        setToCurr(newTo);
+        fetchDataWithCurrencies(newFrom, newTo);
     }
 
     async function fetchData() {
@@ -191,104 +169,113 @@ export default function Forex() {
     const displayData = searchQuery ? filteredData : chartData;
 
     return (
-        <div className='flex flex-col'>
-            <div className='min-h-[700px] bg-[#0d0d0d] text-white flex flex-row p-6 gap-8 pt-10'>
-                <div className='flex flex-col w-1/2 gap-6 h-[600px]'>
-                    {/* Market Overview */}
-                    <div className='h-[150px] bg-[#181818] p-6 rounded-2xl shadow-lg hover:bg-[#1f1f1f]'>
-                        <h1 className='text-lg font-bold'>Market Overview</h1>
-                        <div className='grid grid-cols-2 gap-5 text-gray-300 pt-6'>
-                            <div>
-                                <p className='text-sm text-[#ababab]'>Gold Rate</p>
-                                <p className='text-lg font-semibold text-amber-300'>
-                                    {marketOverview.gold
-                                        ? `$${marketOverview.gold.toLocaleString(undefined, {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2
-                                        })}`
-                                        : "--"}
-                                </p>
+        <div className='flex flex-col bg-[#0d0d0d] min-h-screen text-white'>
+            <div className='flex flex-col md:flex-row p-6 gap-8 pt-10 items-stretch'>
+                {/* Left Column */}
+                <div className='flex flex-col gap-6 w-full md:w-1/2'>
+                    {/* Market Overview Card */}
+                    <div className='bg-[#181818] p-6 rounded-2xl shadow-lg border border-[#262626] transition-colors duration-200 hover:border-gray-700 min-h-[148px] flex flex-col justify-between'>
+                        <h2 className='text-lg font-bold text-white tracking-wide'>Market Overview</h2>
+                        <div className='grid grid-cols-2 gap-4 text-gray-300 pt-2'>
+                            <div className='bg-[#202020] p-4 rounded-xl border border-[#2a2a2a]'>
+                                <p className='text-xs uppercase font-semibold text-gray-400 tracking-wider mb-1'>Gold Rate (XAU)</p>
+                                {marketOverview.gold !== null ? (
+                                    <p className='text-xl font-bold text-amber-400'>
+                                        ${marketOverview.gold.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                ) : (
+                                    <div className='h-7 w-24 bg-[#2a2a2a] animate-pulse rounded-md mt-1'></div>
+                                )}
                             </div>
-                            <div>
-                                <p className='text-sm text-gray-400'>Silver Rate</p>
-                                <p className='text-lg font-semibold text-slate-300'>
-                                    {marketOverview.silver
-                                        ? `$${marketOverview.silver.toLocaleString(undefined, {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2
-                                        })}`
-                                        : "--"}
-                                </p>
+                            <div className='bg-[#202020] p-4 rounded-xl border border-[#2a2a2a]'>
+                                <p className='text-xs uppercase font-semibold text-gray-400 tracking-wider mb-1'>Silver Rate (XAG)</p>
+                                {marketOverview.silver !== null ? (
+                                    <p className='text-xl font-bold text-slate-300'>
+                                        ${marketOverview.silver.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                ) : (
+                                    <div className='h-7 w-24 bg-[#2a2a2a] animate-pulse rounded-md mt-1'></div>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* Line chart */}
-                    <div className='h-[376px] bg-[#181818] p-6 rounded-2xl shadow-lg'>
+                    <div className='h-[376px] bg-[#181818] p-6 rounded-2xl shadow-lg flex flex-col'>
                         <h2 className='text-xl font-semibold mb-4 text-white'>Forex Asset Trend</h2>
-                        <ResponsiveContainer width="100%" height={295}>
-                            <LineChart data={snapshots} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                <XAxis dataKey="month" stroke="#aaa" interval={0} tick={{ fontSize: 12 }} padding={{ left: 20, right: 20 }} />
-                                <YAxis stroke="#aaa" tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                                <Tooltip content={<CustomToolTipLine />} />
-                                <Line type="monotone" dataKey="value" stroke="#2285c3" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: "#fff" }} />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        {loadingData ? (
+                            <div className='h-[295px] w-full bg-[#202020] rounded-xl animate-pulse flex items-center justify-center'>
+                                <div className='h-full w-full bg-[#2a2a2a] rounded-xl opacity-50'></div>
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height={295}>
+                                <LineChart data={snapshots} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                    <XAxis dataKey="month" stroke="#aaa" interval={0} tick={{ fontSize: 12 }} padding={{ left: 20, right: 20 }} />
+                                    <YAxis stroke="#aaa" tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                                    <Tooltip content={<CustomToolTipLine />} />
+                                    <Line type="monotone" dataKey="value" stroke="#2285c3" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: "#fff" }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
 
-                <div className='flex flex-col gap-6 w-1/2 h-[550px]'>
-                    {/* currency converter */}
-                    <div className='h-[160px] bg-[#181818] w-full p-6 rounded-2xl shadow-lg flex flex-col gap-3 hover:bg-[#1f1f1f]'>
-                        <h1 className='text-lg font-semibold text-white'>Currency Converter</h1>
+                {/* Right Column */}
+                <div className='flex flex-col gap-6 w-full md:w-1/2'>
+                    {/* Currency converter */}
+                    <div className='bg-[#181818] w-full p-6 rounded-2xl shadow-lg flex flex-col justify-between hover:bg-[#1f1f1f] transition-colors border border-[#262626] hover:border-gray-700 min-h-[148px]'>
+                        <h1 className='text-lg font-semibold text-white pb-4 mt-2'>Currency Converter</h1>
                         <div className='flex flex-col sm:flex-row gap-3 justify-center items-center'>
-                            <input name='input' type='number' placeholder='Amount' className='p-2 border-2 border-[#3a3a3a] rounded-md text-white w-full sm:w-1/3' onChange={handleChange} />
-                            <select name='from' value={fromCurr} className='p-2 border-2 border-[#3a3a3a] rounded-md text-white w-full sm:w-1/4' onChange={handleChange}>
+                            <input name='input' type='number' placeholder='Amount' value={fromValue} className='p-2 border-2 border-[#3a3a3a] rounded-md text-white w-full sm:w-1/3 bg-transparent focus:outline-none' onChange={handleChange} />
+                            <select name='from' value={fromCurr} className='p-2 border-2 border-[#3a3a3a] rounded-md text-white w-full sm:w-1/4 bg-[#181818] focus:outline-none' onChange={handleChange}>
                                 {Object.keys(countryList).map(currency => <option key={currency} value={currency}>{currency}</option>)}
                             </select>
-                            <span className='text-white cursor-pointer' onClick={swapPairs}><LuArrowRightLeft /></span>
-                            <select name='to' value={toCurr} className='p-2 border-2 border-[#3a3a3a] rounded-md text-white w-full sm:w-1/4' onChange={handleChange}>
+                            <span className='text-white cursor-pointer hover:text-[#2285c3] transition-colors' onClick={swapPairs}><LuArrowRightLeft /></span>
+                            <select name='to' value={toCurr} className='p-2 border-2 border-[#3a3a3a] rounded-md text-white w-full sm:w-1/4 bg-[#181818] focus:outline-none' onChange={handleChange}>
                                 {Object.keys(countryList).map(currency => <option key={currency} value={currency}>{currency}</option>)}
                             </select>
-                            <button className='bg-[#2285c3] px-4 py-2 rounded-md text-white font-semibold hover:bg-[#1a6b9c] cursor-pointer' onClick={fetchData}>Convert</button>
+                            <button className='bg-[#2285c3] px-4 py-2 rounded-md text-white font-semibold hover:bg-[#1a6b9c] cursor-pointer transition-colors w-full sm:w-auto' onClick={fetchData}>Convert</button>
                         </div>
-                        {exchangeRate && (<div className='text-center text-sm text-gray-300'> 1 {fromCurr} = {exchangeRate.toLocaleString(undefined, {
-                            maximumFractionDigits: 4
-                        })} {toCurr}
-                        </div>
-                        )}
 
-                        {showResult && (
-                            <div className='text-center font-semibold'>
-                                {fromValue} {fromCurr} = {toValue} {toCurr}
-                            </div>
-                        )}
+                        <div className='h-5 text-center font-semibold text-sm pt-2'>
+                            {showResult && (
+                                <span>{fromValue || "1"} {fromCurr} = {toValue} {toCurr}</span>
+                            )}
+                        </div>
                     </div>
 
                     {/* Pie chart */}
-                    <div className='h-[420px] bg-[#181818] p-6 rounded-2xl shadow-lg flex items-center justify-center'>
-                        <div className='relative w-full max-w-md'>
-                            <ResponsiveContainer width="100%" height={320}>
-                                <PieChart margin={{ top: 10, right: 80, bottom: 10, left: 80 }}>
-                                    <Pie data={displayData} cx="50%" cy="50%" innerRadius={95} outerRadius={135} paddingAngle={0} dataKey="value" label={(entry) => entry.name} labelLine={false} stroke='none'>
-                                        {displayData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index] || "#6B7280"} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip content={<CustomToolTip active total={total} />} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center'>
-                                <div className='text-white text-2xl font-semibold'>{total.toLocaleString('de-DE')} €</div>
+                    <div className='h-[376px] bg-[#181818] p-6 rounded-2xl shadow-lg flex items-center justify-center relative'>
+                        {loadingData ? (
+                            <div className='relative w-64 h-64 flex items-center justify-center animate-pulse'>
+                                <div className='w-56 h-56 rounded-full border-[18px] border-[#2a2a2a] flex items-center justify-center'>
+                                    <div className='h-8 bg-[#2a2a2a] rounded w-24'></div>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className='relative w-full max-w-md h-full flex items-center justify-center'>
+                                <ResponsiveContainer width="100%" height={320}>
+                                    <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                                        <Pie data={displayData} cx="50%" cy="50%" innerRadius={95} outerRadius={135} paddingAngle={0} dataKey="value" label={(entry) => entry.name} labelLine={false} stroke='none'>
+                                            {displayData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length] || "#6B7280"} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip content={<CustomToolTip total={total} />} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none'>
+                                    <div className='text-white text-2xl font-semibold'>${total.toLocaleString('en-US')}</div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
             {/* Trades table */}
-            <div className="mx-full max-w-6xl px-6">
-                <div className='flex items-center justify-between mb-3'>
+            <div className="w-full max-w-7xl px-6 mx-auto">
+                <div className='flex items-center justify-between mb-3 mt-4'>
                     <h1 className='text-white font-semibold text-xl'>All Assets</h1>
                     <div className='flex items-center gap-3 bg-[#181818] p-2 rounded-md w-full sm:w-1/4'>
                         <LuSearch size={20} className='text-white' />
@@ -296,7 +283,7 @@ export default function Forex() {
                     </div>
                 </div>
 
-                <div className='rounded-2xl overflow-hidden bg-[#181818] mt-6 mb-12 overflow-x-auto'>
+                <div className='rounded-2xl overflow-hidden bg-[#181818] mt-6 mb-12 overflow-x-auto shadow-lg'>
                     <table className='w-full'>
                         <thead className='text-sm font-medium text-[#ababab] bg-[#1f1f1f]'>
                             <tr>
@@ -307,26 +294,44 @@ export default function Forex() {
                             </tr>
                         </thead>
                         <tbody>
-                            {displayData.map((row, index) => (
-                                <tr key={index} className='text-sm text-white border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#202020]'>
-                                    <td className='py-2.5 px-4 select-none'>
-                                        <div className='flex items-center gap-3'>
-                                            <div className='rounded-full h-3 w-3' style={{ background: COLORS[index] }}></div>
-                                            <span>{row.pair}</span>
-                                        </div>
-                                    </td>
-                                    <td className='py-3 px-4 text-right select-none'>{row.units.toLocaleString()}</td>
-                                    <td className='py-3 px-4 text-right select-none'>{row.position}</td>
-                                    <td className='py-3 px-4 pr-5 text-right select-none'>{total > 0
-                                        ? ((row.value / total) * 100).toFixed(2)
-                                        : "0.00"
-                                    }%</td>
-                                </tr>
-                            ))}
+                            {loadingData ? (
+                                Array.from({ length: 4 }).map((_, idx) => (
+                                    <tr key={idx} className='border-b border-[#2a2a2a]'>
+                                        <td className='py-3.5 px-10'><div className='h-4 w-24 bg-[#2a2a2a] rounded animate-pulse'></div></td>
+                                        <td className='py-3.5 px-4'><div className='h-4 w-16 bg-[#2a2a2a] rounded animate-pulse ml-auto'></div></td>
+                                        <td className='py-3.5 px-4'><div className='h-5 w-14 bg-[#2a2a2a] rounded-full animate-pulse ml-auto'></div></td>
+                                        <td className='py-3.5 px-4 pr-5'><div className='h-4 w-12 bg-[#2a2a2a] rounded animate-pulse ml-auto'></div></td>
+                                    </tr>
+                                ))
+                            ) : (
+                                displayData.map((row, index) => (
+                                    <tr key={index} className='text-sm text-white border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#202020] transition-colors'>
+                                        <td className='py-2.5 px-4 select-none pl-10'>
+                                            <div className='flex items-center gap-3'>
+                                                <div className='rounded-full h-3 w-3' style={{ background: COLORS[index % COLORS.length] }}></div>
+                                                <span>{row.pair}</span>
+                                            </div>
+                                        </td>
+                                        <td className='py-3 px-4 text-right select-none'>{row.units.toLocaleString()}</td>
+                                        <td className='py-3 px-4 text-right select-none'>
+                                            <span className={`inline-block px-3 py-0.5 rounded-full text-xs font-medium ${row.position === "Long"
+                                                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                                    : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                                }`}>
+                                                {row.position}
+                                            </span>
+                                        </td>
+                                        <td className='py-3 px-4 pr-5 text-right select-none'>{total > 0
+                                            ? ((row.value / total) * 100).toFixed(2)
+                                            : "0.00"
+                                        }%</td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-    )
+    );
 }

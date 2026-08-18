@@ -3,7 +3,59 @@ import { motion } from 'framer-motion';
 import { FaPlus, FaChevronDown } from 'react-icons/fa';
 import { MdDelete, MdEdit } from 'react-icons/md';
 import { AppContext } from '../context/appContext';
-import axios from 'axios';
+import API from '../Api/axios';
+
+// Skeleton Loader Component
+function AccountsSkeleton() {
+    return (
+        <div className="rounded-2xl overflow-hidden bg-[#181818] mt-6 border border-[#2a2a2a] animate-pulse">
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead className="bg-[#1f1f1f]">
+                        <tr>
+                            <th className="py-3 px-4"><div className="h-3 w-20 bg-[#2a2a2a] rounded"></div></th>
+                            <th className="py-3 px-4"><div className="h-3 w-16 bg-[#2a2a2a] rounded"></div></th>
+                            <th className="py-3 px-4"><div className="h-3 w-28 bg-[#2a2a2a] rounded"></div></th>
+                            <th className="py-3 px-4"><div className="h-3 w-24 bg-[#2a2a2a] rounded"></div></th>
+                            <th className="py-3 px-4"><div className="h-3 w-24 bg-[#2a2a2a] rounded"></div></th>
+                            <th className="py-3 px-4 text-right"><div className="h-3 w-12 bg-[#2a2a2a] rounded ml-auto"></div></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {[1, 2, 3].map((item) => (
+                            <tr key={item} className="border-b border-[#2a2a2a] last:border-b-0">
+                                <td className="py-4 px-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-3 w-3 rounded-full bg-[#2a2a2a]"></div>
+                                        <div className="h-4 w-24 bg-[#2a2a2a] rounded"></div>
+                                    </div>
+                                </td>
+                                <td className="py-4 px-4">
+                                    <div className="h-5 w-20 bg-[#2a2a2a] rounded-md"></div>
+                                </td>
+                                <td className="py-4 px-4">
+                                    <div className="h-4 w-36 bg-[#2a2a2a] rounded"></div>
+                                </td>
+                                <td className="py-4 px-4">
+                                    <div className="h-3 w-28 bg-[#2a2a2a] rounded"></div>
+                                </td>
+                                <td className="py-4 px-4">
+                                    <div className="h-3 w-28 bg-[#2a2a2a] rounded"></div>
+                                </td>
+                                <td className="py-4 px-4">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <div className="h-6 w-6 bg-[#2a2a2a] rounded"></div>
+                                        <div className="h-6 w-6 bg-[#2a2a2a] rounded"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
 
 export default function Accounts() {
     const { userData, BackendUrl, toast } = useContext(AppContext);
@@ -42,43 +94,18 @@ export default function Accounts() {
         coinbase_passphrase: 'Passphrase'
     };
 
-    const getAuthToken = () => {
-        return localStorage.getItem("access_token");
-    };
+
 
     const apiRequest = async (endpoint, method = 'GET', body = null) => {
         try {
-            const token = getAuthToken();
-            
-            if (!token) {
-                setError('Please log in to continue');
-                toast.error('Please log in to continue');
-                window.location.href = '/login';
-                return null;
-            }
-
-            const config = {
+            const response = await API({
                 method,
-                url: `${BackendUrl}/api${endpoint}`,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                data: body
-            };
-
-            const response = await axios(config);
+                url: `/api${endpoint}`,
+                data: body,
+            });
             return response.data;
         } catch (err) {
             console.error('API Request Error:', err);
-            
-            if (err.response?.status === 401) {
-                toast.error('Session expired. Please log in again.');
-                localStorage.removeItem("access_token");
-                window.location.href = '/login';
-                return null;
-            }
-            
             const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Request failed';
             setError(errorMessage);
             toast.error(errorMessage);
@@ -140,14 +167,13 @@ export default function Accounts() {
         }
     }, [userData]);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event) {
             if (showDropdown && !event.target.closest('.dropdown-container')) {
                 setShowDropdown(false);
             }
         }
-        
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showDropdown]);
@@ -159,7 +185,7 @@ export default function Accounts() {
         setFormData({});
         setError('');
         setEditingExchange(null);
-        
+
         const exchange = exchangeTypes.find(e => e.id === exchangeId);
         if (exchange && accounts) {
             const existingData = {};
@@ -184,7 +210,7 @@ export default function Accounts() {
         setEditingExchange(exchange.id);
         setSelectedExchange(exchange.id);
         setShowAddForm(true);
-        
+
         const existingData = {};
         exchange.fields.forEach(field => {
             if (exchange.data[field]) {
@@ -195,9 +221,9 @@ export default function Accounts() {
     }
 
     function handleInputChange(field, value) {
-        setFormData(prev => ({ 
-            ...prev, 
-            [field]: value 
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
         }));
     }
 
@@ -210,7 +236,7 @@ export default function Accounts() {
 
         const exchange = exchangeTypes.find(e => e.id === selectedExchange);
         const dataToSave = {};
-        
+
         exchange.fields.forEach(field => {
             dataToSave[field] = formData[field] || '';
         });
@@ -222,7 +248,7 @@ export default function Accounts() {
             } else {
                 result = await saveAccount(dataToSave);
             }
-            
+
             if (result?.success) {
                 await loadAccounts();
                 handleCancel();
@@ -230,7 +256,7 @@ export default function Accounts() {
                 toast.success(result.message || 'Account saved successfully');
             }
         } catch (err) {
-            // Error handled in apiRequest
+            // Handled
         }
     }
 
@@ -247,19 +273,19 @@ export default function Accounts() {
                 toast.success(result.message || `${exchange.label} data deleted successfully`);
             }
         } catch (err) {
-            // Error handled
+            // Handled
         }
     }
 
     function getConnectedExchanges() {
         if (!accounts || Object.keys(accounts).length === 0) return [];
-        
+
         const connected = [];
         exchangeTypes.forEach(exchange => {
-            const hasData = exchange.fields.some(field => 
+            const hasData = exchange.fields.some(field =>
                 accounts[field] && accounts[field].trim() !== ''
             );
-            
+
             if (hasData) {
                 connected.push({
                     ...exchange,
@@ -278,9 +304,9 @@ export default function Accounts() {
     function formatDate(dateString) {
         if (!dateString) return 'N/A';
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
@@ -328,7 +354,7 @@ export default function Accounts() {
                         <h1 className="text-2xl text-white font-semibold">Connected Accounts</h1>
                         <p className="text-sm text-[#ababab] mt-1">Manage your exchange connections and account details</p>
                     </div>
-                    
+
                     {/* Dropdown Button */}
                     <div className="relative dropdown-container">
                         <button
@@ -339,7 +365,7 @@ export default function Accounts() {
                             Add Exchange
                             <FaChevronDown size={12} className={`transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`} />
                         </button>
-                        
+
                         {/* Dropdown Menu */}
                         {showDropdown && (
                             <div className="absolute right-0 mt-2 w-56 bg-[#181818] border border-[#2a2a2a] rounded-lg shadow-xl z-50">
@@ -349,8 +375,8 @@ export default function Accounts() {
                                         onClick={() => handleSelectExchange(exchange.id)}
                                         className="w-full text-left px-4 py-3 text-sm text-white hover:bg-[#202020] transition-colors first:rounded-t-lg last:rounded-b-lg flex items-center gap-3"
                                     >
-                                        <div 
-                                            className="rounded-full h-2.5 w-2.5" 
+                                        <div
+                                            className="rounded-full h-2.5 w-2.5"
                                             style={{ background: exchange.color }}
                                         ></div>
                                         {exchange.label}
@@ -428,81 +454,85 @@ export default function Accounts() {
                     </motion.div>
                 )}
 
-                {/* Connected Accounts Table - Only show if there are connected exchanges */}
-                {connectedExchanges.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 100, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.2 }}
-                        className="rounded-2xl overflow-hidden bg-[#181818] mt-6"
-                    >
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="text-xs font-medium text-[#ababab] bg-[#1f1f1f]">
-                                    <tr>
-                                        <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Exchange</th>
-                                        <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Status</th>
-                                        <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Values</th>
-                                        <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Created At</th>
-                                        <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Updated At</th>
-                                        <th className="py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {connectedExchanges.map((exchange, index) => (
-                                        <tr 
-                                            key={index} 
-                                            className="text-sm text-white border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#202020]"
-                                        >
-                                            <td className="py-3 px-4 select-none">
-                                                <div className="flex items-center gap-3">
-                                                    <div 
-                                                        className="rounded-full h-3 w-3" 
-                                                        style={{ background: exchange.color }}
-                                                    ></div>
-                                                    <span>{exchange.label}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-4 select-none">
-                                                <span className="px-2 py-0.5 rounded-md text-xs bg-green-500/20 text-green-400">
-                                                    Connected
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-4 select-none">
-                                                <span className="text-xs text-[#ababab] font-mono">
-                                                    {getFieldValues(exchange)}
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-4 select-none text-xs text-[#ababab]">
-                                                {formatDate(exchange.createdAt)}
-                                            </td>
-                                            <td className="py-3 px-4 select-none text-xs text-[#ababab]">
-                                                {formatDate(exchange.updatedAt)}
-                                            </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => handleEdit(exchange)}
-                                                        className="text-[#ababab] hover:text-[#3b82f6] transition-colors p-1.5"
-                                                        title="Edit"
-                                                    >
-                                                        <MdEdit size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteExchange(exchange.id)}
-                                                        className="text-[#ababab] hover:text-red-400 transition-colors p-1.5"
-                                                        title="Delete"
-                                                    >
-                                                        <MdDelete size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
+                {/* Skeleton Loader vs Data Table */}
+                {loading ? (
+                    <AccountsSkeleton />
+                ) : (
+                    connectedExchanges.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 100, x: 0 }}
+                            transition={{ duration: 0.6, delay: 0.2 }}
+                            className="rounded-2xl overflow-hidden bg-[#181818] mt-6"
+                        >
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="text-xs font-medium text-[#ababab] bg-[#1f1f1f]">
+                                        <tr>
+                                            <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Exchange</th>
+                                            <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Status</th>
+                                            <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Values</th>
+                                            <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Created At</th>
+                                            <th className="py-2.5 px-4 text-left font-mono uppercase tracking-wide select-none">Updated At</th>
+                                            <th className="py-2.5 px-4 text-right font-mono uppercase tracking-wide select-none">Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </motion.div>
+                                    </thead>
+                                    <tbody>
+                                        {connectedExchanges.map((exchange, index) => (
+                                            <tr
+                                                key={index}
+                                                className="text-sm text-white border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#202020]"
+                                            >
+                                                <td className="py-3 px-4 select-none">
+                                                    <div className="flex items-center gap-3">
+                                                        <div
+                                                            className="rounded-full h-3 w-3"
+                                                            style={{ background: exchange.color }}
+                                                        ></div>
+                                                        <span>{exchange.label}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4 select-none">
+                                                    <span className="px-2 py-0.5 rounded-md text-xs bg-green-500/20 text-green-400">
+                                                        Connected
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4 select-none">
+                                                    <span className="text-xs text-[#ababab] font-mono">
+                                                        {getFieldValues(exchange)}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4 select-none text-xs text-[#ababab]">
+                                                    {formatDate(exchange.createdAt)}
+                                                </td>
+                                                <td className="py-3 px-4 select-none text-xs text-[#ababab]">
+                                                    {formatDate(exchange.updatedAt)}
+                                                </td>
+                                                <td className="py-3 px-4 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleEdit(exchange)}
+                                                            className="text-[#ababab] hover:text-[#3b82f6] transition-colors p-1.5"
+                                                            title="Edit"
+                                                        >
+                                                            <MdEdit size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteExchange(exchange.id)}
+                                                            className="text-[#ababab] hover:text-red-400 transition-colors p-1.5"
+                                                            title="Delete"
+                                                        >
+                                                            <MdDelete size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </motion.div>
+                    )
                 )}
             </div>
         </div>

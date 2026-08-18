@@ -91,21 +91,19 @@ export default function Settings() {
                     <div className="space-y-1 bg-[#181818] p-2.5 rounded-xl border border-[#2a2a2a]">
                         <button
                             onClick={() => setActiveTab('preferences')}
-                            className={`w-full flex items-center gap-3 text-sm px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
-                                activeTab === 'preferences'
+                            className={`w-full flex items-center gap-3 text-sm px-3 py-2 rounded-lg font-medium cursor-pointer transition-all duration-200 ${activeTab === 'preferences'
                                     ? 'bg-[#202020] text-blue-400 border border-blue-500/20'
                                     : 'text-[#ababab] hover:bg-[#202020] hover:text-white'
-                            }`}
+                                }`}
                         >
                             <FaSlidersH size={16} /> App Preferences
                         </button>
                         <button
                             onClick={() => setActiveTab('account')}
-                            className={`w-full flex items-center gap-3 text-sm px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
-                                activeTab === 'account'
+                            className={`w-full flex items-center gap-3 text-sm px-3 py-2 rounded-lg cursor-pointer font-medium transition-all duration-200 ${activeTab === 'account'
                                     ? 'bg-[#202020] text-blue-400 border border-blue-500/20'
                                     : 'text-[#ababab] hover:bg-[#202020] hover:text-white'
-                            }`}
+                                }`}
                         >
                             <FaUser size={16} /> Account Security
                         </button>
@@ -206,7 +204,7 @@ export default function Settings() {
                                     {/* Dynamic Password Management Form */}
                                     <div className="bg-[#181818] p-5 rounded-xl border border-[#2a2a2a] space-y-4">
                                         <h3 className="text-sm font-semibold tracking-wide flex items-center gap-2 border-b border-[#2a2a2a] pb-2 text-gray-200">
-                                            <FaLock className="text-red-400" /> Update Authentication Secret
+                                            <FaLock className="text-red-400" /> Update Password
                                         </h3>
 
                                         <form onSubmit={submitPasswordUpdate} className="space-y-4 pt-1">
@@ -254,7 +252,7 @@ export default function Settings() {
                                                         </button>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="flex flex-col gap-1.5">
                                                     <label className="text-xs text-[#ababab]">Confirm New Password</label>
                                                     <div className="relative w-full flex items-center">
@@ -282,7 +280,7 @@ export default function Settings() {
                                                 <button
                                                     type="submit"
                                                     disabled={updatingPassword}
-                                                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800/50 text-white text-xs px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 shadow-md shadow-blue-600/10"
+                                                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800/50 text-white text-xs px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 shadow-md shadow-blue-600/10 cursor-pointer"
                                                 >
                                                     {updatingPassword ? 'Saving Changes...' : 'Save Password changes'}
                                                 </button>

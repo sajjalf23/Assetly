@@ -38,29 +38,29 @@ const ChangePassword = () => {
   };
 
   return (
-    accessToken &&(
+    accessToken && (
       <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-lg shadow-md w-[380px]"
-      >
-        <h2 className="text-green-500 text-2xl mb-4 text-center">Reset Password</h2>
-        <input
-          type="password"
-          placeholder="New Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full p-2 mb-4 border rounded"
-        />
-        <button
-          type="submit"
-          className="w-full py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white p-8 rounded-lg shadow-md w-[380px]"
         >
-          Reset Password
-        </button>
-      </form>
-    </div>
+          <h2 className="text-green-500 text-2xl mb-4 text-center">Reset Password</h2>
+          <input
+            type="password"
+            placeholder="New Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full p-2 mb-4 border rounded"
+          />
+          <button
+            type="submit"
+            className="w-full py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            Reset Password
+          </button>
+        </form>
+      </div>
     )
   );
 };

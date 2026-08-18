@@ -5,7 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Signup from "./Pages/Signup";
 import Login from "./Pages/Login";
 import ForgotPassword from "./Pages/ForgotPassword";
-import GoogleRedirect from "./Pages/GoogleRedirect";
+import AuthCallback from './Pages/authCallback';
 import ChangePassword from './Pages/ChangePassword';
 import { AppContext } from "./Context/appContext";
 import Earnings from './Pages/Earnings';
@@ -50,7 +50,7 @@ const AppContent = () => {
           <Route path="/auth/signup" element={<Signup />} />
           <Route path="/auth/login" element={<Login />} />
           <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-          <Route path="/auth/callback" element={<GoogleRedirect />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/change-password" element={<ChangePassword />} />
 
           {/* Protected/Dashboard Routes (with navbar) */}

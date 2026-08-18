@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { AppContext } from "./appContext";
 import { toast } from "react-toastify";
-import API from "../Api/axios.js";
+import API, { setAccessToken, getAccessToken } from "../Api/axios";
 import { useNavigate } from "react-router-dom";
 import supabase from '../../config/supabaseClient';
 
@@ -16,13 +16,27 @@ export const AppContextProvider = ({ children }) => {
   // =========================================================
   // TRANSACTION PAGINATION STATE
   // =========================================================
-  const [transactionPagination, setTransactionPagination] = useState({
-    page: 1,
-    limit: 50,
-    total: 0,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPreviousPage: false
+  const [transactionPagination, setTransactionPagination] = useState(() => {
+    const cached = sessionStorage.getItem(
+      'cached_transaction_pagination'
+    );
+
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {
+        // ignore invalid cache
+      }
+    }
+
+    return {
+      page: 1,
+      limit: 50,
+      total: 0,
+      totalPages: 0,
+      hasNextPage: false,
+      hasPreviousPage: false
+    };
   });
 
   // =========================================================
@@ -61,24 +75,13 @@ export const AppContextProvider = ({ children }) => {
     return cached ? parseInt(cached) : 0;
   });
 
-  const getAuthToken = () => {
-    return localStorage.getItem("access_token");
-  };
 
   // =========================================================
   // ACCOUNTS
   // =========================================================
   const loadAccounts = useCallback(async () => {
-    const token = getAuthToken();
-
-    if (!token) return;
-
     try {
-      const { data } = await API.get(`/api/account/accounts`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const { data } = await API.get(`/api/account/accounts`);
 
       if (data.success) {
         setAccounts(data.account || {});
@@ -110,7 +113,7 @@ export const AppContextProvider = ({ children }) => {
     page = 1,
     forceRefresh = false
   ) => {
-    const token = getAuthToken();
+    const token = getAccessToken();
 
     if (!token) {
       console.log("No token found, skipping transaction fetch");
@@ -178,6 +181,11 @@ export const AppContextProvider = ({ children }) => {
           sessionStorage.setItem(
             "cached_summary",
             JSON.stringify(data.summary || null)
+          );
+
+          sessionStorage.setItem(
+            "cached_transaction_pagination",
+            JSON.stringify(data.pagination)
           );
 
           sessionStorage.setItem(
@@ -256,49 +264,34 @@ export const AppContextProvider = ({ children }) => {
   // =========================================================
   // GET USER DATA
   // =========================================================
-  const getUserData = useCallback(async (token) => {
-  if (!token) {
-    setLoading(false);
-    return;
-  }
+  const getUserData = useCallback(async () => {
 
-  try {
-    const { data } = await API.get(`/api/auth/user`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+    try {
+
+      const { data } = await API.get("/api/auth/user");
+
+      console.log("User data fetched:", data);
+
+      if (data.success) {
+        setUserData(data.user);
+        setIsLoggedIn(true);
+      } else {
+        setUserData(null);
+        setIsLoggedIn(false);
       }
-    });
 
-    console.log("User data fetched:", data);
+    } catch (error) {
 
-    if (data.success) {
-      setUserData(data.user);
-      setIsLoggedIn(true);
-    } else {
+      console.error("User fetch error:", error);
+
       setUserData(null);
       setIsLoggedIn(false);
 
-      localStorage.removeItem("access_token");
-
-      toast.error(data.message || "Failed to fetch user info");
+    } finally {
+      setLoading(false);
     }
 
-  } catch (error) {
-    console.error("User fetch error:", error);
-
-    setUserData(null);
-    setIsLoggedIn(false);
-
-    localStorage.removeItem("access_token");
-
-    if (error.response?.status !== 401) {
-      toast.error("Failed to fetch user information");
-    }
-
-  } finally {
-    setLoading(false);
-  }
-}, []);
+  }, []);
 
   // =========================================================
   // REFRESH ACCOUNTS
@@ -351,14 +344,6 @@ export const AppContextProvider = ({ children }) => {
       setInitialFetchDone(false);
       setLastFetchTime(0);
 
-      // Clear session storage
-      sessionStorage.removeItem('cached_transactions');
-      sessionStorage.removeItem('cached_summary');
-      sessionStorage.removeItem('last_fetch_time');
-      sessionStorage.removeItem('initial_fetch_done');
-
-      localStorage.removeItem("access_token");
-
       navigate("/");
 
       toast.success("Logged out successfully");
@@ -379,20 +364,17 @@ export const AppContextProvider = ({ children }) => {
   // INITIAL USER CHECK
   // =========================================================
   useEffect(() => {
-
-    const token = localStorage.getItem("access_token");
-
-    if (token) {
-
-      getUserData(token);
-
-    } else {
-
-      setLoading(false);
-
-    }
-
-  }, [getUserData]);
+    const checkAuth = async () => {
+      try {
+        const { data } = await API.post("/api/auth/refresh");
+        setAccessToken(data.access_token);
+        await getUserData();
+      } catch {
+        setLoading(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // =========================================================
   // SUPABASE AUTH LISTENER
@@ -409,15 +391,7 @@ export const AppContextProvider = ({ children }) => {
           );
 
           if (event === 'SIGNED_IN' && session) {
-
-            localStorage.setItem(
-              "access_token",
-              session.access_token
-            );
-
-            getUserData(
-              session.access_token
-            );
+            await getUserData();
 
           } else if (event === 'SIGNED_OUT') {
 
@@ -439,22 +413,11 @@ export const AppContextProvider = ({ children }) => {
             setInitialFetchDone(false);
             setLastFetchTime(0);
 
-            localStorage.removeItem(
-              "access_token"
-            );
 
             sessionStorage.clear();
 
-          } else if (
-            event === 'TOKEN_REFRESHED' &&
-            session
-          ) {
-
-            localStorage.setItem(
-              "access_token",
-              session.access_token
-            );
-
+          } else if (event === 'TOKEN_REFRESHED' && session) {
+            console.log("Access Token refreshed")
           }
 
         }

@@ -105,7 +105,7 @@ export default function LandingPage() {
                 </nav>
             </header>
 
-            <main className="max-w-6xl mx-auto px-6 pb-20 mt-20">
+            <main className="max-w-6xl mx-auto pb-20 mt-20">
                 <section className="grid md:grid-cols-2 gap-12 items-center mt-12 text-white">
                     <div>
                         <h1 className="text-5xl md:text-6xl leading-tight font-extrabold mb-6">All your markets. All in one dashboard.</h1>
@@ -114,7 +114,7 @@ export default function LandingPage() {
                         <ul className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-white/70">
                             <li>• Real-time price streaming</li>
                             <li>• Portfolio PnL & allocation</li>
-                            <li>• Sync accounts & import trades</li>
+                            <li>• Connect & Import Trades</li>
                         </ul>
                     </div>
 
