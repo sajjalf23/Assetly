@@ -2,7 +2,7 @@ import React, { useContext } from 'react'
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Signup from "./Pages/Signup";
+import SignUp from "./Pages/SignUp";
 import Login from "./Pages/Login";
 import ForgotPassword from "./Pages/ForgotPassword";
 import AuthCallback from './Pages/authCallback';
@@ -47,7 +47,7 @@ const AppContent = () => {
         <Routes>
           {/* Public/Auth Routes (no navbar) */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/auth/signup" element={<Signup />} />
+          <Route path="/auth/signup" element={<SignUp />} />
           <Route path="/auth/login" element={<Login />} />
           <Route path="/auth/forgot-password" element={<ForgotPassword />} />
           <Route path="/auth/callback" element={<AuthCallback />} />

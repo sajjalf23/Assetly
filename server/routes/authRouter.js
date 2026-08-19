@@ -1,16 +1,57 @@
-import express from "express";
-const authRouter = express.Router()
-import { register, signin, googleLogin, logout, resetpassword, getUser, callback, refresh } from "../controllers/authController.js"
-import { changePassword } from "../controllers/changePasswordController.js"
-import authenticateUser from "../middleware/authMiddleware.js";
+import express from 'express';
 
-authRouter.post("/register", register);
-authRouter.post("/signin", signin);
-authRouter.get("/googleLogin", googleLogin);
-authRouter.post("/logout", authenticateUser, logout);
-authRouter.post("/resetPassword", resetpassword);
-authRouter.get("/user", authenticateUser, getUser);
-authRouter.post("/changePassword", changePassword);
-authRouter.get("/callback", callback);
-authRouter.post("/refresh", refresh);
-export default authRouter;
+import {
+    signup,
+    signin,
+    getUser,
+    refresh,
+    logout,
+    changePassword,
+    resetpassword,
+    updateForgottenPassword,
+} from '../controllers/authController.js';
+
+import authenticateUser from '../middleware/authMiddleware.js';
+
+const router = express.Router();
+
+// =========================================================
+// PUBLIC ROUTES
+// =========================================================
+
+router.post('/signup', signup);
+
+router.post('/signin', signin);
+
+router.post('/refresh', refresh);
+
+router.post('/resetpassword', resetpassword);
+
+router.post(
+    '/update-forgotten-password',
+    updateForgottenPassword
+);
+
+// =========================================================
+// PROTECTED ROUTES
+// =========================================================
+
+router.get(
+    '/user',
+    authenticateUser,
+    getUser
+);
+
+router.post(
+    '/logout',
+    authenticateUser,
+    logout
+);
+
+router.post(
+    '/changePassword',
+    authenticateUser,
+    changePassword
+);
+
+export default router;

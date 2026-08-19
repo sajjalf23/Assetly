@@ -16,8 +16,10 @@
     "@supabase/supabase-js": "^2.75.0",
     "axios": "^1.13.4",
     "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
+    "exceljs": "^3.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
@@ -26,6 +28,7 @@
     "node-cron": "^4.6.0",
     "node-fetch": "^3.3.2",
     "nodemailer": "^9.0.4",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "xlsx": "^0.18.5"
   }
 }
