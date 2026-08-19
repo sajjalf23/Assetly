@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { LuArrowRightLeft, LuSearch } from "react-icons/lu";
 import countryList from '../data/countryCode';
-import { AppContext } from '../context/appContext';
+import { AppContext } from '../Context/appContext';
 import API from '../Api/axios';
 
 // Colors

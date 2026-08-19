@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { FaPlus, FaChevronDown } from 'react-icons/fa';
 import { MdDelete, MdEdit } from 'react-icons/md';
-import { AppContext } from '../context/appContext';
+import { AppContext } from '../Context/appContext';
 import API from '../Api/axios';
 
 // Skeleton Loader Component

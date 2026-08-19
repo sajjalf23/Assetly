@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { AppContext } from '../context/appContext';
+import { AppContext } from '../Context/appContext';
 import ExportTransactionsModal from '../components/ExportTransactionsModal';
 import { LuSearch, LuRefreshCw, LuInfo, LuDownload } from "react-icons/lu";
 import { toast } from 'react-toastify';

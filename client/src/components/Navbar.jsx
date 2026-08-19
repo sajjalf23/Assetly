@@ -7,7 +7,7 @@ import { HiShoppingBag } from "react-icons/hi2";
 import { useState, useContext } from 'react';
 import { RxHamburgerMenu } from "react-icons/rx";
 import { LuLogOut } from "react-icons/lu";
-import { AppContext } from '../context/AppContext';
+import { AppContext } from '../Context/appContext';
 
 
 export default function Navbar() {

@@ -2,7 +2,7 @@ import { useState, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import API from "../Api/axios";
 import { toast } from "react-toastify";
-import { AppContext } from '../context/appContext';
+import { AppContext } from '../Context/appContext';
 import { FaUser, FaSlidersH, FaShieldAlt, FaDatabase, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { MdRefresh } from 'react-icons/md';
 

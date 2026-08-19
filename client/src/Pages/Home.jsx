@@ -1,11 +1,11 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { AppContext } from '../context/appContext';
+import { AppContext } from '../Context/appContext';
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import { LuWallet, LuTrendingUp, LuTrendingDown, LuCpu, LuGlobe, LuShieldCheck } from 'react-icons/lu';
 import { formatPercentage } from '../utils/formatters';
 import { formatChange } from '../utils/formatChange';
-import API from '../api/axios';
+import API from '../Api/axios';
 
 import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';

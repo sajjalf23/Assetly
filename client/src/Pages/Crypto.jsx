@@ -4,7 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip
 } from 'recharts';
 import { LuSearch, LuTrendingUp, LuTrendingDown } from "react-icons/lu";
-import { AppContext } from '../context/appContext';
+import { AppContext } from '../Context/appContext';
 import { getAssetColor } from '../utils/assetColors';
 import { formatChange } from '../utils/formatChange';
 import API from '../Api/axios';
