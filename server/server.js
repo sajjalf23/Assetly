@@ -31,7 +31,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: "https://assetly-sigma.vercel.app",
+    origin: "https://assetly-taupe.vercel.app",
     credentials: true,
 }));
 
