@@ -1,15 +1,26 @@
-import React, { useContext } from 'react'
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import React, { useContext } from 'react';
+import {
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+} from 'react-router-dom';
+
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import SignUp from "./Pages/SignUp";
-import Login from "./Pages/Login";
-import ForgotPassword from "./Pages/ForgotPassword";
+
+// Auth Pages
+import SignUp from './Pages/SignUp';
+import Login from './Pages/Login';
+import ForgotPassword from './Pages/ForgotPassword';
 import AuthCallback from './Pages/authCallback';
 import ChangePassword from './Pages/ChangePassword';
-import { AppContext } from "./Context/appContext";
+
+// Context
+import { AppContext } from './Context/appContext';
+
+// Dashboard Pages
 import Earnings from './Pages/Earnings';
-import Navbar from './components/Navbar';
 import LandingPage from './Pages/LandingPage';
 import Home from './Pages/Home';
 import Forex from './Pages/Forex';
@@ -20,71 +31,153 @@ import Overview from './Pages/Overview';
 import Accounts from './Pages/Accounts';
 import Transactions from './Pages/Transactions';
 import Settings from './Pages/Settings';
+
+// Components
+import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+
 
 const AppContent = () => {
   const { userData, isLoggedIn } = useContext(AppContext);
   const location = useLocation();
 
+  // Routes where the dashboard navbar should NOT appear
   const hideNavbarPaths = [
+    '/',
     '/auth/login',
     '/auth/signup',
     '/auth/forgot-password',
     '/auth/callback',
     '/auth/change-password',
-    '/'
   ];
 
   const hideNavbar = hideNavbarPaths.includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-[#0d0d0d]">
-      {/* Show Navbar only on authenticated/Pages */}
+
+      {/* Navbar */}
       {!hideNavbar && <Navbar />}
 
-      {/* Main content area with conditional padding */}
-      <div className={hideNavbar ? "" : "md:pl-[250px] transition-all duration-300"}>
+      {/* Main Content */}
+      <div
+        className={
+          hideNavbar
+            ? ''
+            : 'md:pl-[250px] transition-all duration-300'
+        }
+      >
         <Routes>
-          {/* Public/Auth Routes (no navbar) */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/auth/signup" element={<SignUp />} />
-          <Route path="/auth/login" element={<Login />} />
-          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/auth/change-password" element={<ChangePassword />} />
 
-          {/* Protected/Dashboard Routes (with navbar) */}
+          {/* =====================================================
+              PUBLIC / AUTH ROUTES
+          ===================================================== */}
+
+          <Route
+            path="/"
+            element={<LandingPage />}
+          />
+
+          <Route
+            path="/auth/signup"
+            element={<SignUp />}
+          />
+
+          <Route
+            path="/auth/login"
+            element={<Login />}
+          />
+
+          <Route
+            path="/auth/forgot-password"
+            element={<ForgotPassword />}
+          />
+
+          <Route
+            path="/auth/callback"
+            element={<AuthCallback />}
+          />
+
+          <Route
+            path="/auth/change-password"
+            element={<ChangePassword />}
+          />
+
+
+          {/* =====================================================
+              PROTECTED DASHBOARD ROUTES
+          ===================================================== */}
+
           <Route element={<ProtectedRoute />}>
 
-            <Route path="/home" element={<Home />} />
+            <Route
+              path="/home"
+              element={<Home />}
+            />
 
-            <Route path="/news" element={<News />} />
+            <Route
+              path="/news"
+              element={<News />}
+            />
 
-            <Route path="/crypto" element={<Crypto />} />
+            <Route
+              path="/crypto"
+              element={<Crypto />}
+            />
 
-            <Route path="/stocks" element={<Stocks />} />
+            <Route
+              path="/stocks"
+              element={<Stocks />}
+            />
 
-            <Route path="/forex" element={<Forex />} />
+            <Route
+              path="/forex"
+              element={<Forex />}
+            />
 
-            <Route path="/overview" element={<Overview />} />
+            <Route
+              path="/overview"
+              element={<Overview />}
+            />
 
-            <Route path="/accounts" element={<Accounts />} />
+            <Route
+              path="/accounts"
+              element={<Accounts />}
+            />
 
-            <Route path="/transactions" element={<Transactions />} />
+            <Route
+              path="/transactions"
+              element={<Transactions />}
+            />
 
-            <Route path="/settings" element={<Settings />} />
+            <Route
+              path="/settings"
+              element={<Settings />}
+            />
 
-            <Route path="/earnings" element={<Earnings />} />
+            <Route
+              path="/earnings"
+              element={<Earnings />}
+            />
 
           </Route>
 
-          {/* Redirect any unknown route to home */}
-          <Route path="*" element={<Navigate to="/home" replace />} />
+
+          {/* =====================================================
+              UNKNOWN ROUTES
+          ===================================================== */}
+
+          <Route
+            path="*"
+            element={<Navigate to="/home" replace />}
+          />
+
         </Routes>
       </div>
     </div>
   );
 };
+
 
 const App = () => {
   return (
@@ -101,9 +194,11 @@ const App = () => {
         pauseOnHover
         theme="dark"
       />
+
       <AppContent />
     </>
   );
 };
+
 
 export default App;
