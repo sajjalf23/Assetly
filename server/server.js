@@ -31,7 +31,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: process.env.CLIENT_ORIGIN || "https://assetly-sigma.vercel.app",
+    origin: "https://assetly-sigma.vercel.app",
     credentials: true,
 }));
 
